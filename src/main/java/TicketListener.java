@@ -477,7 +477,7 @@ public class TicketListener implements Listener {
         CardType type = CardType.valueOf(cardData.getName().toUpperCase());
         if (type == CardType.GOLD || type == CardType.DIAMOND) {
             double actualPrice = cardData.getPrice() * globalMult;
-            if (totalFinal > 2 * actualPrice) {
+            if (totalFinal > 3 * actualPrice) {
                 String cardDisplayName = (type == CardType.GOLD) ? "金刮刮卡" : "钻石刮刮卡";
                 String message = "<gradient:#FF0000:#FF8C00:#FFFF00:#00FF00:#00BFFF:#8A2BE2>" +
                         "[ScratchCardFumino]恭喜" + player.getName() + "在" + cardDisplayName + "中赢得了" + formatMoney(totalFinal) + "金币!</gradient>";
