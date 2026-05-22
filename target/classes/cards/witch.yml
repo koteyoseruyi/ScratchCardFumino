@@ -18,6 +18,56 @@ ui:
     - 29
     - 31
     - 43
+  # 装饰层：按材质分组，每层指定所有要覆盖的槽位
+  decoration:
+    - material: YELLOW_STAINED_GLASS_PANE
+      slots:
+        - 6
+        - 7
+        - 8
+        - 15
+        - 17
+        - 24
+        - 25
+        - 26
+    - material: ORANGE_STAINED_GLASS_PANE
+      slots:
+        - 33
+        - 34
+        - 35
+        - 42
+        - 44
+        - 51
+        - 52
+        - 53
+    - material: BLACK_STAINED_GLASS_PANE
+      slots:
+        - 10
+        - 14
+        - 19
+        - 23
+        - 28
+        - 32
+        - 37
+        - 38
+        - 39
+        - 40
+        - 41
+    - material: RED_STAINED_GLASS_PANE
+      slots:
+        - 46
+        - 47
+        - 48
+        - 49
+        - 50
+    - material: LIGHT_BLUE_STAINED_GLASS_PANE
+      slots:
+        - 11
+        - 12
+        - 13
+        - 20
+        - 22
+        - 30
 
 sounds:
   open: "BLOCK_ANVIL_LAND"

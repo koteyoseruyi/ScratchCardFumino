@@ -94,6 +94,7 @@ public class CardLoader {
         Material bgMaterial = Material.BLACK_STAINED_GLASS_PANE;
         int[] slotPositions = new int[rewardSlots + multiplierSlots];
         Material highlightMaterial = null;
+        List<CardData.DecorationLayer> decoration = new ArrayList<>();
 
         if (uiSection != null) {
             uiSize = uiSection.getInt("size", 27);
@@ -121,6 +122,22 @@ public class CardLoader {
                     highlightMaterial = Material.valueOf(hlStr);
                 } catch (IllegalArgumentException ignored) {}
             }
+
+            // ===== 解析装饰层 =====
+            List<Map<?, ?>> decorationList = uiSection.getMapList("decoration");
+            for (Map<?, ?> layerMap : decorationList) {
+                String matStr = (String) layerMap.get("material");
+                List<Integer> slotList = (List<Integer>) layerMap.get("slots");
+                if (matStr != null && slotList != null && !slotList.isEmpty()) {
+                    try {
+                        Material mat = Material.valueOf(matStr);
+                        int[] slots = slotList.stream().mapToInt(Integer::intValue).toArray();
+                        decoration.add(new CardData.DecorationLayer(mat, slots));
+                    } catch (IllegalArgumentException ignored) {
+                        plugin.getLogger().warning("刮刮卡 " + name + " 装饰层材质无效: " + matStr);
+                    }
+                }
+            }
         } else {
             for (int i = 0; i < slotPositions.length; i++) {
                 slotPositions[i] = 10 + i * 2;
@@ -144,7 +161,6 @@ public class CardLoader {
             }
         }
 
-        // misc 类卡片允许没有奖励配置
         if (rewards.isEmpty() && !"misc".equalsIgnoreCase(category)) {
             plugin.getLogger().warning("刮刮卡 " + name + " 没有有效的奖励配置，跳过");
             return null;
@@ -168,6 +184,7 @@ public class CardLoader {
         return new CardData(name, category, display, lore, slotCount, price, bonusEnabled,
                 rewardSlots, multiplierSlots, rewards, multipliers,
                 uiSize, uiTitle, bgMaterial, slotPositions, highlightMaterial,
+                decoration,
                 sounds);
     }
 

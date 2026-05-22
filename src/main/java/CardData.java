@@ -1,14 +1,13 @@
 package com.example.scratch;
 
 import org.bukkit.Material;
-import org.bukkit.potion.PotionEffectType;
 
 import java.util.*;
 
 public class CardData {
 
     private final String name;
-    private final String category;          // "eco" 或 "misc"
+    private final String category;
     private final String display;
     private final List<String> lore;
     private final int slotCount;
@@ -25,6 +24,7 @@ public class CardData {
     private final Material backgroundMaterial;
     private final int[] slotPositions;
     private final Material highlightMaterial;
+    private final List<DecorationLayer> decoration; // 新增：装饰层列表
 
     // 音效配置
     private final SoundConfig sounds;
@@ -34,6 +34,7 @@ public class CardData {
                     List<RewardEntry> rewards, List<MultiplierEntry> multipliers,
                     int uiSize, String uiTitle, Material backgroundMaterial,
                     int[] slotPositions, Material highlightMaterial,
+                    List<DecorationLayer> decoration,
                     SoundConfig sounds) {
         this.name = name;
         this.category = category;
@@ -51,6 +52,7 @@ public class CardData {
         this.backgroundMaterial = backgroundMaterial;
         this.slotPositions = slotPositions;
         this.highlightMaterial = highlightMaterial;
+        this.decoration = decoration;
         this.sounds = sounds;
     }
 
@@ -77,6 +79,7 @@ public class CardData {
     public Material getBackgroundMaterial() { return backgroundMaterial; }
     public int[] getSlotPositions() { return slotPositions; }
     public Material getHighlightMaterial() { return highlightMaterial; }
+    public List<DecorationLayer> getDecoration() { return decoration; }
 
     public int[] getMultiplierSlotPositions() {
         if (multiplierSlots <= 0) return new int[0];
@@ -113,6 +116,21 @@ public class CardData {
         return null;
     }
 
+    // ========== 装饰层内部类 ==========
+
+    public static class DecorationLayer {
+        private final Material material;
+        private final int[] slots;
+
+        public DecorationLayer(Material material, int[] slots) {
+            this.material = material;
+            this.slots = slots;
+        }
+
+        public Material getMaterial() { return material; }
+        public int[] getSlots() { return slots; }
+    }
+
     // ========== 内部类 ==========
 
     public static class RewardEntry {
@@ -144,9 +162,6 @@ public class CardData {
         public double getWeight() { return weight; }
     }
 
-    /**
-     * 音效配置
-     */
     public static class SoundConfig {
         private final String open;
         private final String reward;

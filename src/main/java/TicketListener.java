@@ -24,6 +24,7 @@ public class TicketListener implements Listener {
     private final ScratchPlugin plugin;
     private final NamespacedKey cardTypeKey;
     private final Map<UUID, CardSession> sessions = new HashMap<>();
+    private final Map<UUID, Long> witchCooldowns = new HashMap<>();
 
     private static final Map<String, Material> REWARD_MATERIAL_MAP = new HashMap<>();
     static {
@@ -104,6 +105,21 @@ public class TicketListener implements Listener {
             return;
         }
 
+        // === 女巫卡冷却检查 ===
+        if (type == CardType.WITCH) {
+            UUID uuid = event.getPlayer().getUniqueId();
+            long now = System.currentTimeMillis();
+            if (witchCooldowns.containsKey(uuid)) {
+                long cooldownEnd = witchCooldowns.get(uuid);
+                if (now < cooldownEnd) {
+                    long remainingSeconds = (cooldownEnd - now + 999) / 1000;
+                    event.getPlayer().sendActionBar(Component.text("§c女巫的刮刮卡冷却中: §e" + remainingSeconds + " 秒"));
+                    event.setCancelled(true);
+                    return;
+                }
+            }
+        }
+
         CardData cardData = plugin.getCardLoader().getCardData(type);
         if (cardData == null) {
             event.getPlayer().sendMessage("§c该刮刮卡配置已失效！");
@@ -147,7 +163,6 @@ public class TicketListener implements Listener {
             session.multiplierResults.add(getRandomMultiplier(cardData, random));
         }
 
-        // 放置按钮
         for (int i = 0; i < buttonSlots.length; i++) {
             inv.setItem(buttonSlots[i], createBedrockButton());
         }
@@ -201,7 +216,8 @@ public class TicketListener implements Listener {
         Inventory inv = Bukkit.createInventory(null, size,
                 MiniMessage.miniMessage().deserialize(titleRaw));
 
-        fillWitchBackground(inv);
+        // 使用配置驱动的背景填充
+        fillDecoratedBackground(inv, cardData);
 
         Random random = new Random();
         CardSession session = new CardSession(cardData, buttonSlots.length);
@@ -237,60 +253,45 @@ public class TicketListener implements Listener {
         playSound(player, cardData.getSounds().getOpen(), 0.5f, 1.0f);
     }
 
-    private void fillWitchBackground(Inventory inv) {
-        ItemStack purple = new ItemStack(Material.PURPLE_STAINED_GLASS_PANE);
-        ItemMeta purpleMeta = purple.getItemMeta();
-        purpleMeta.displayName(Component.text(" "));
-        purple.setItemMeta(purpleMeta);
-        for (int i = 0; i < 54; i++) {
-            inv.setItem(i, purple);
+    /**
+     * 通用装饰背景填充（从卡片配置读取 decoration 层）
+     * 先填充背景材质，然后逐层覆盖装饰材质
+     */
+    private void fillDecoratedBackground(Inventory inv, CardData cardData) {
+        int size = cardData.getUiSize();
+        Material bgMat = cardData.getBackgroundMaterial();
+
+        // 填充基础背景
+        ItemStack bg = new ItemStack(bgMat);
+        ItemMeta bgMeta = bg.getItemMeta();
+        bgMeta.displayName(Component.text(" "));
+        bg.setItemMeta(bgMeta);
+        for (int i = 0; i < size; i++) {
+            inv.setItem(i, bg);
         }
 
-        // 钟1（16）周围一圈黄色玻璃板
-        fillSlot(inv, 7, Material.YELLOW_STAINED_GLASS_PANE);
-        fillSlot(inv, 15, Material.YELLOW_STAINED_GLASS_PANE);
-        fillSlot(inv, 17, Material.YELLOW_STAINED_GLASS_PANE);
-        fillSlot(inv, 25, Material.YELLOW_STAINED_GLASS_PANE);
-
-        // 钟2（43）周围一圈橙色玻璃板
-        fillSlot(inv, 34, Material.ORANGE_STAINED_GLASS_PANE);
-        fillSlot(inv, 42, Material.ORANGE_STAINED_GLASS_PANE);
-        fillSlot(inv, 44, Material.ORANGE_STAINED_GLASS_PANE);
-        fillSlot(inv, 52, Material.ORANGE_STAINED_GLASS_PANE);
-
-        // 最后一行（45-53）红色玻璃板（按钮位置除外）
-        int[] buttonSlots = {16, 21, 29, 31, 43};
+        // 获取按钮槽位集合（防止装饰覆盖按钮）
         Set<Integer> buttonSet = new HashSet<>();
-        for (int b : buttonSlots) buttonSet.add(b);
-        for (int i = 45; i <= 53; i++) {
-            if (!buttonSet.contains(i)) {
-                fillSlot(inv, i, Material.RED_STAINED_GLASS_PANE);
+        for (int bs : cardData.getSlotPositions()) {
+            buttonSet.add(bs);
+        }
+
+        // 逐层覆盖装饰材质
+        List<CardData.DecorationLayer> decoration = cardData.getDecoration();
+        if (decoration != null) {
+            for (CardData.DecorationLayer layer : decoration) {
+                ItemStack decorItem = new ItemStack(layer.getMaterial());
+                ItemMeta decorMeta = decorItem.getItemMeta();
+                decorMeta.displayName(Component.text(" "));
+                decorItem.setItemMeta(decorMeta);
+
+                for (int slot : layer.getSlots()) {
+                    if (slot >= 0 && slot < size && !buttonSet.contains(slot)) {
+                        inv.setItem(slot, decorItem);
+                    }
+                }
             }
         }
-
-        // 黑色玻璃板
-        fillSlot(inv, 10, Material.BLACK_STAINED_GLASS_PANE);
-        fillSlot(inv, 14, Material.BLACK_STAINED_GLASS_PANE);
-        fillSlot(inv, 19, Material.BLACK_STAINED_GLASS_PANE);
-        fillSlot(inv, 23, Material.BLACK_STAINED_GLASS_PANE);
-        fillSlot(inv, 28, Material.BLACK_STAINED_GLASS_PANE);
-        fillSlot(inv, 32, Material.BLACK_STAINED_GLASS_PANE);
-
-        // 浅蓝色玻璃板
-        fillSlot(inv, 11, Material.LIGHT_BLUE_STAINED_GLASS_PANE);
-        fillSlot(inv, 12, Material.LIGHT_BLUE_STAINED_GLASS_PANE);
-        fillSlot(inv, 13, Material.LIGHT_BLUE_STAINED_GLASS_PANE);
-        fillSlot(inv, 20, Material.LIGHT_BLUE_STAINED_GLASS_PANE);
-        fillSlot(inv, 22, Material.LIGHT_BLUE_STAINED_GLASS_PANE);
-        fillSlot(inv, 30, Material.LIGHT_BLUE_STAINED_GLASS_PANE);
-    }
-
-    private void fillSlot(Inventory inv, int slot, Material material) {
-        ItemStack item = new ItemStack(material);
-        ItemMeta meta = item.getItemMeta();
-        meta.displayName(Component.text(" "));
-        item.setItemMeta(meta);
-        inv.setItem(slot, item);
     }
 
     // ================================================================
@@ -307,6 +308,14 @@ public class TicketListener implements Listener {
 
     private void playSound(Player player, String soundName, float volume, float pitch) {
         try {
+            NamespacedKey soundKey = NamespacedKey.fromString(soundName.toLowerCase().replace("_", "."));
+            if (soundKey != null) {
+                Sound sound = Registry.SOUND_EVENT.get(soundKey);
+                if (sound != null) {
+                    player.getWorld().playSound(player.getLocation(), sound, volume, pitch);
+                    return;
+                }
+            }
             Sound sound = Sound.valueOf(soundName);
             player.getWorld().playSound(player.getLocation(), sound, volume, pitch);
         } catch (IllegalArgumentException ignored) {}
@@ -476,31 +485,31 @@ public class TicketListener implements Listener {
             }
         }
 
-        finishCard(player, session, cardData);
+        session.completed = true;
+        playSound(player, cardData.getSounds().getComplete(), 1.0f, 1.0f);
+
+        Bukkit.getScheduler().runTaskLater(plugin, () -> {
+            if (player.isOnline()) player.closeInventory();
+        }, 20L);
     }
 
     // ========== MISC 卡片（女巫卡）点击 ==========
 
     private void handleMiscCardClick(Player player, CardSession session, int index, int slot) {
-        CardData cardData = session.cardData;
-        CardData.SoundConfig sounds = cardData.getSounds();
         int preset = session.witchPreset;
 
         if (preset == 1) {
-            if (index == 0) {
+            if (index == 0 || index == 4) {
                 ItemStack clock = new ItemStack(Material.CLOCK);
                 ItemMeta meta = clock.getItemMeta();
-                meta.displayName(Component.text("§e§l" + session.witchTimeBase + "s"));
+                if (index == 0) {
+                    meta.displayName(Component.text("§e§l" + session.witchTimeBase + "s"));
+                } else {
+                    meta.displayName(Component.text("§e§l×" + session.witchTimeMultiplier));
+                }
                 clock.setItemMeta(meta);
                 player.getOpenInventory().getTopInventory().setItem(slot, clock);
-                playSound(player, sounds.getReward(), 1.0f, 1.0f);
-            } else if (index == 4) {
-                ItemStack clock = new ItemStack(Material.CLOCK);
-                ItemMeta meta = clock.getItemMeta();
-                meta.displayName(Component.text("§e§l×" + session.witchTimeMultiplier));
-                clock.setItemMeta(meta);
-                player.getOpenInventory().getTopInventory().setItem(slot, clock);
-                playSound(player, sounds.getReward(), 1.0f, 1.0f);
+                playSound(player, "BLOCK_RESPAWN_ANCHOR_CHARGE", 1.0f, 1.0f);
             } else {
                 int bottleIndex = index - 1;
                 PotionEffectType effectType = session.witchBottleEffects[bottleIndex];
@@ -513,7 +522,7 @@ public class TicketListener implements Listener {
                 meta.displayName(Component.text((isPositive ? "§a" : "§c") + effectName));
                 potion.setItemMeta(meta);
                 player.getOpenInventory().getTopInventory().setItem(slot, potion);
-                playSound(player, sounds.getReward(), 1.0f, 1.0f);
+                playSound(player, "BLOCK_BREWING_STAND_BREW", 1.0f, 1.0f);
             }
         } else if (preset == 2) {
             if (index == 0 || index == 4) {
@@ -529,7 +538,7 @@ public class TicketListener implements Listener {
                 potion.setItemMeta(meta);
                 player.getOpenInventory().getTopInventory().setItem(slot, potion);
             }
-            playSound(player, sounds.getEmpty(), 1.0f, 1.0f);
+            playSound(player, "ENTITY_ENDER_DRAGON_GROWL", 1.0f, 1.0f);
         } else if (preset == 3) {
             if (index == 0 || index == 4) {
                 ItemStack totem = new ItemStack(Material.TOTEM_OF_UNDYING);
@@ -544,10 +553,10 @@ public class TicketListener implements Listener {
                 potion.setItemMeta(meta);
                 player.getOpenInventory().getTopInventory().setItem(slot, potion);
             }
-            playSound(player, sounds.getReward(), 1.0f, 1.0f);
+            playSound(player, "ENTITY_VILLAGER_CELEBRATE", 1.0f, 1.0f);
         }
 
-        playSound(player, sounds.getScratch(), 0.5f, 1.0f);
+        playSound(player, "BLOCK_GRINDSTONE_USE", 0.5f, 1.0f);
 
         if (session.remaining == 0) {
             completeWitchCard(player, session);
@@ -555,8 +564,8 @@ public class TicketListener implements Listener {
     }
 
     private void completeWitchCard(Player player, CardSession session) {
-        CardData cardData = session.cardData;
         int preset = session.witchPreset;
+        int cooldownSeconds = 0;
 
         if (preset == 1) {
             int baseTime = session.witchTimeBase;
@@ -573,18 +582,22 @@ public class TicketListener implements Listener {
                 int count = entry.getValue();
                 int amplifier = count - 1;
 
-                int actualDuration = isPositiveEffect(type) ? duration : duration / 2;
+                int actualDuration = duration;
                 if (actualDuration < 20) actualDuration = 20;
 
                 player.addPotionEffect(new PotionEffect(type, actualDuration, amplifier, false, true));
             }
 
+            cooldownSeconds = (int) (baseTime * multiplier);
+
             player.sendMessage("§a你获得了药水效果！持续时间: §e" + (duration / 20) + " 秒");
+            playSound(player, "ENTITY_GENERIC_DRINK", 1.0f, 1.0f);
 
         } else if (preset == 2) {
             player.setHealth(0);
             String message = "<gradient:#8B0000:#FF0000>[ScratchCardFumino]" + player.getName() + "在女巫的刮刮卡中刮到了致死毒药!</gradient>";
             Bukkit.getServer().broadcast(MiniMessage.miniMessage().deserialize(message));
+            playSound(player, "ENTITY_ENDER_DRAGON_GROWL", 1.0f, 1.0f);
 
         } else if (preset == 3) {
             for (PotionEffectType effect : ALL_POSITIVE_EFFECTS) {
@@ -593,18 +606,21 @@ public class TicketListener implements Listener {
             String message = "<gradient:#C0C0C0:#FFD700>[ScratchCardFumino]" + player.getName() + "在女巫的刮刮卡中刮到了稀世神药!</gradient>";
             Bukkit.getServer().broadcast(MiniMessage.miniMessage().deserialize(message));
             player.sendMessage("§6§l你获得了所有正面效果 III (300秒)！");
+            playSound(player, "UI_TOAST_CHALLENGE_COMPLETE", 1.0f, 1.0f);
+            cooldownSeconds = 300;
         }
 
-        finishCard(player, session, cardData);
-    }
+        if (cooldownSeconds > 0) {
+            long cooldownEnd = System.currentTimeMillis() + (cooldownSeconds * 1000L);
+            witchCooldowns.put(player.getUniqueId(), cooldownEnd);
+            player.sendMessage("§7女巫的刮刮卡进入冷却: §e" + cooldownSeconds + " 秒");
+        }
 
-    private void finishCard(Player player, CardSession session, CardData cardData) {
         session.completed = true;
-        playSound(player, cardData.getSounds().getComplete(), 1.0f, 1.0f);
 
         Bukkit.getScheduler().runTaskLater(plugin, () -> {
             if (player.isOnline()) player.closeInventory();
-        }, 20L);
+        }, 40L);
     }
 
     // ================================================================
@@ -652,7 +668,7 @@ public class TicketListener implements Listener {
     }
 
     // ================================================================
-    //  加成计算
+    //  加成计算（仅 ECO 卡使用）
     // ================================================================
 
     private double calculateBonusTotal(List<String> results, CardData cardData) {
@@ -680,7 +696,7 @@ public class TicketListener implements Listener {
     }
 
     // ================================================================
-    //  关闭界面
+    //  关闭界面（阻止关闭，重新打开）
     // ================================================================
 
     @EventHandler
@@ -704,11 +720,11 @@ public class TicketListener implements Listener {
                 MiniMessage.miniMessage().deserialize(titleRaw));
 
         if (cardData.isMisc()) {
-            fillWitchBackground(inv);
+            fillDecoratedBackground(inv, cardData);
             for (int i = 0; i < buttonSlots.length; i++) {
                 int slot = buttonSlots[i];
                 if (session.scratched[i]) {
-                    handleMiscCardClick(player, session, i, slot);
+                    displayMiscScratchedSlot(inv, session, i, slot);
                 } else {
                     inv.setItem(slot, createBedrockButton());
                 }
@@ -754,6 +770,65 @@ public class TicketListener implements Listener {
 
         sessions.put(player.getUniqueId(), session);
         player.openInventory(inv);
+    }
+
+    private void displayMiscScratchedSlot(Inventory inv, CardSession session, int index, int slot) {
+        int preset = session.witchPreset;
+
+        if (preset == 1) {
+            if (index == 0) {
+                ItemStack clock = new ItemStack(Material.CLOCK);
+                ItemMeta meta = clock.getItemMeta();
+                meta.displayName(Component.text("§e§l" + session.witchTimeBase + "s"));
+                clock.setItemMeta(meta);
+                inv.setItem(slot, clock);
+            } else if (index == 4) {
+                ItemStack clock = new ItemStack(Material.CLOCK);
+                ItemMeta meta = clock.getItemMeta();
+                meta.displayName(Component.text("§e§l×" + session.witchTimeMultiplier));
+                clock.setItemMeta(meta);
+                inv.setItem(slot, clock);
+            } else {
+                int bottleIndex = index - 1;
+                PotionEffectType effectType = session.witchBottleEffects[bottleIndex];
+                boolean isPositive = isPositiveEffect(effectType);
+                Material mat = isPositive ? Material.POTION : Material.SPLASH_POTION;
+                String effectName = getEffectDisplayName(effectType);
+                ItemStack potion = new ItemStack(mat);
+                ItemMeta meta = potion.getItemMeta();
+                meta.displayName(Component.text((isPositive ? "§a" : "§c") + effectName));
+                potion.setItemMeta(meta);
+                inv.setItem(slot, potion);
+            }
+        } else if (preset == 2) {
+            if (index == 0 || index == 4) {
+                ItemStack barrier = new ItemStack(Material.BARRIER);
+                ItemMeta meta = barrier.getItemMeta();
+                meta.displayName(Component.text("§c§l致死毒药"));
+                barrier.setItemMeta(meta);
+                inv.setItem(slot, barrier);
+            } else {
+                ItemStack potion = new ItemStack(Material.SPLASH_POTION);
+                ItemMeta meta = potion.getItemMeta();
+                meta.displayName(Component.text("§c§l瞬间伤害"));
+                potion.setItemMeta(meta);
+                inv.setItem(slot, potion);
+            }
+        } else if (preset == 3) {
+            if (index == 0 || index == 4) {
+                ItemStack totem = new ItemStack(Material.TOTEM_OF_UNDYING);
+                ItemMeta meta = totem.getItemMeta();
+                meta.displayName(Component.text("§6§l稀世神药"));
+                totem.setItemMeta(meta);
+                inv.setItem(slot, totem);
+            } else {
+                ItemStack potion = new ItemStack(Material.POTION);
+                ItemMeta meta = potion.getItemMeta();
+                meta.displayName(Component.text("§6§l力量"));
+                potion.setItemMeta(meta);
+                inv.setItem(slot, potion);
+            }
+        }
     }
 
     // ================================================================
