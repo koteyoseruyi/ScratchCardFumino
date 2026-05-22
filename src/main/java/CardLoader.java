@@ -105,9 +105,8 @@ public class CardLoader {
 
             List<Integer> slotPosList = uiSection.getIntegerList("slot-positions");
             if (slotPosList.isEmpty()) {
-                // 如果没有配置槽位，使用默认值
                 for (int i = 0; i < slotPositions.length; i++) {
-                    slotPositions[i] = 10 + i * 2; // 默认 10,12,14...
+                    slotPositions[i] = 10 + i * 2;
                 }
             } else {
                 slotPositions = slotPosList.stream().mapToInt(Integer::intValue).toArray();
@@ -120,11 +119,14 @@ public class CardLoader {
                 } catch (IllegalArgumentException ignored) {}
             }
         } else {
-            // 没有 ui 配置时，使用默认槽位
             for (int i = 0; i < slotPositions.length; i++) {
                 slotPositions[i] = 10 + i * 2;
             }
         }
+
+        // ===== 解析音效配置 =====
+        ConfigurationSection soundsSection = config.getConfigurationSection("sounds");
+        CardData.SoundConfig sounds = parseSounds(soundsSection);
 
         // ===== 解析奖励 =====
         List<CardData.RewardEntry> rewards = new ArrayList<>();
@@ -161,7 +163,36 @@ public class CardLoader {
 
         return new CardData(name, display, lore, slotCount, price, bonusEnabled,
                 rewardSlots, multiplierSlots, rewards, multipliers,
-                uiSize, uiTitle, bgMaterial, slotPositions, highlightMaterial);
+                uiSize, uiTitle, bgMaterial, slotPositions, highlightMaterial,
+                sounds);
+    }
+
+    /**
+     * 解析音效配置
+     */
+    private CardData.SoundConfig parseSounds(ConfigurationSection section) {
+        String open = "BLOCK_ANVIL_LAND";
+        String reward = "ENTITY_VILLAGER_CELEBRATE";
+        String empty = "ENTITY_VILLAGER_HURT";
+        String scratch = "BLOCK_GRINDSTONE_USE";
+        String complete = "ENTITY_FIREWORK_ROCKET_LAUNCH";
+        String multiplierSound = "BLOCK_NOTE_BLOCK_HARP";
+        float multiplierPitchMin = 0.6f;
+        float multiplierPitchMax = 2.0f;
+
+        if (section != null) {
+            open = section.getString("open", open);
+            reward = section.getString("reward", reward);
+            empty = section.getString("empty", empty);
+            scratch = section.getString("scratch", scratch);
+            complete = section.getString("complete", complete);
+            multiplierSound = section.getString("multiplier-sound", multiplierSound);
+            multiplierPitchMin = (float) section.getDouble("multiplier-pitch-min", multiplierPitchMin);
+            multiplierPitchMax = (float) section.getDouble("multiplier-pitch-max", multiplierPitchMax);
+        }
+
+        return new CardData.SoundConfig(open, reward, empty, scratch, complete,
+                multiplierSound, multiplierPitchMin, multiplierPitchMax);
     }
 
     // ===== 查询方法 =====

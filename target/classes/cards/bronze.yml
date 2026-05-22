@@ -12,11 +12,18 @@ ui:
   size: 27
   title: "<gradient:#CD7F32:#FFD700>铜刮刮卡</gradient>"
   background-material: BROWN_STAINED_GLASS_PANE
-  # 奖励槽位列表（所有可刮的槽位，前 reward-slots 个为奖励槽，剩余为倍率槽）
   slot-positions:
     - 11
     - 13
     - 15
+
+# 音效配置
+sounds:
+  open: "BLOCK_ANVIL_LAND"
+  reward: "ENTITY_VILLAGER_CELEBRATE"
+  empty: "ENTITY_VILLAGER_HURT"
+  scratch: "BLOCK_GRINDSTONE_USE"
+  complete: "ENTITY_FIREWORK_ROCKET_LAUNCH"
 
 rewards:
   EMPTY:   { weight: 44, reward: 0.0 }

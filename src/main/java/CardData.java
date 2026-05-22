@@ -21,14 +21,18 @@ public class CardData {
     private final int uiSize;
     private final String uiTitle;
     private final Material backgroundMaterial;
-    private final int[] slotPositions;           // 所有按钮槽位（奖励槽在前，倍率槽在后）
-    private final Material highlightMaterial;    // 高亮材质（null 表示无高亮）
+    private final int[] slotPositions;
+    private final Material highlightMaterial;
+
+    // 音效配置
+    private final SoundConfig sounds;
 
     public CardData(String name, String display, List<String> lore, int slotCount,
                     double price, boolean bonusEnabled, int rewardSlots, int multiplierSlots,
                     List<RewardEntry> rewards, List<MultiplierEntry> multipliers,
                     int uiSize, String uiTitle, Material backgroundMaterial,
-                    int[] slotPositions, Material highlightMaterial) {
+                    int[] slotPositions, Material highlightMaterial,
+                    SoundConfig sounds) {
         this.name = name;
         this.display = display;
         this.lore = lore;
@@ -44,6 +48,7 @@ public class CardData {
         this.backgroundMaterial = backgroundMaterial;
         this.slotPositions = slotPositions;
         this.highlightMaterial = highlightMaterial;
+        this.sounds = sounds;
     }
 
     // ===== 基础信息 =====
@@ -67,9 +72,6 @@ public class CardData {
     public int[] getSlotPositions() { return slotPositions; }
     public Material getHighlightMaterial() { return highlightMaterial; }
 
-    /**
-     * 获取倍率槽位置列表（从 slotPositions 中截取后半部分）
-     */
     public int[] getMultiplierSlotPositions() {
         if (multiplierSlots <= 0) return new int[0];
         int[] multPos = new int[multiplierSlots];
@@ -77,23 +79,24 @@ public class CardData {
         return multPos;
     }
 
-    /**
-     * 获取倍率槽四周需要高亮的槽位
-     */
     public Set<Integer> getHighlightSlots() {
         Set<Integer> highlightSet = new HashSet<>();
         int[] multPos = getMultiplierSlotPositions();
-        int cols = 9; // 固定9列
+        int cols = 9;
         for (int ms : multPos) {
             int row = ms / cols;
             int col = ms % cols;
-            if (row > 0) highlightSet.add(ms - cols);               // 上
-            if (row < (uiSize / cols) - 1) highlightSet.add(ms + cols); // 下
-            if (col > 0) highlightSet.add(ms - 1);                 // 左
-            if (col < cols - 1) highlightSet.add(ms + 1);          // 右
+            if (row > 0) highlightSet.add(ms - cols);
+            if (row < (uiSize / cols) - 1) highlightSet.add(ms + cols);
+            if (col > 0) highlightSet.add(ms - 1);
+            if (col < cols - 1) highlightSet.add(ms + 1);
         }
         return highlightSet;
     }
+
+    // ===== 音效配置 =====
+
+    public SoundConfig getSounds() { return sounds; }
 
     // ===== 奖励/倍率查找 =====
 
@@ -104,7 +107,7 @@ public class CardData {
         return null;
     }
 
-    // ===== 内部类 =====
+    // ========== 内部类 ==========
 
     public static class RewardEntry {
         private final String key;
@@ -133,5 +136,42 @@ public class CardData {
 
         public int getValue() { return value; }
         public double getWeight() { return weight; }
+    }
+
+    /**
+     * 音效配置
+     */
+    public static class SoundConfig {
+        private final String open;
+        private final String reward;
+        private final String empty;
+        private final String scratch;
+        private final String complete;
+        private final String multiplierSound;
+        private final float multiplierPitchMin;
+        private final float multiplierPitchMax;
+
+        public SoundConfig(String open, String reward, String empty,
+                           String scratch, String complete,
+                           String multiplierSound,
+                           float multiplierPitchMin, float multiplierPitchMax) {
+            this.open = open;
+            this.reward = reward;
+            this.empty = empty;
+            this.scratch = scratch;
+            this.complete = complete;
+            this.multiplierSound = multiplierSound;
+            this.multiplierPitchMin = multiplierPitchMin;
+            this.multiplierPitchMax = multiplierPitchMax;
+        }
+
+        public String getOpen() { return open; }
+        public String getReward() { return reward; }
+        public String getEmpty() { return empty; }
+        public String getScratch() { return scratch; }
+        public String getComplete() { return complete; }
+        public String getMultiplierSound() { return multiplierSound; }
+        public float getMultiplierPitchMin() { return multiplierPitchMin; }
+        public float getMultiplierPitchMax() { return multiplierPitchMax; }
     }
 }

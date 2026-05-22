@@ -19,6 +19,14 @@ ui:
     - 21
     - 23
 
+# 音效配置
+sounds:
+  open: "BLOCK_ANVIL_LAND"
+  reward: "ENTITY_VILLAGER_CELEBRATE"
+  empty: "ENTITY_VILLAGER_HURT"
+  scratch: "BLOCK_GRINDSTONE_USE"
+  complete: "ENTITY_FIREWORK_ROCKET_LAUNCH"
+
 rewards:
   EMPTY:   { weight: 30, reward: 0.0 }
   SMALL:   { weight: 30, reward: 0.6 }

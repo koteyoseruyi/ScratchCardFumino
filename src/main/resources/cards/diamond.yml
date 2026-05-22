@@ -21,8 +21,18 @@ ui:
     - 38
     - 40
     - 42
-  # 倍率槽周围高亮材质（可选，如果不配置则无高亮）
   highlight-material: BLUE_STAINED_GLASS_PANE
+
+# 音效配置
+sounds:
+  open: "BLOCK_ANVIL_LAND"
+  reward: "ENTITY_VILLAGER_CELEBRATE"
+  empty: "ENTITY_VILLAGER_HURT"
+  scratch: "BLOCK_GRINDSTONE_USE"
+  complete: "ENTITY_FIREWORK_ROCKET_LAUNCH"
+  multiplier-sound: "BLOCK_NOTE_BLOCK_HARP"
+  multiplier-pitch-min: 0.6
+  multiplier-pitch-max: 2.0
 
 rewards:
   EMPTY:   { weight: 30, reward: 0.0 }

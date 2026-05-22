@@ -82,19 +82,17 @@ public class TicketListener implements Listener {
     }
 
     /**
-     * 打开刮刮卡界面（统一从 CardData 读取配置）
+     * 打开刮刮卡界面
      */
     private void openCard(Player player, CardData cardData) {
         int size = cardData.getUiSize();
         String titleRaw = cardData.getUiTitle();
         int[] buttonSlots = cardData.getSlotPositions();
         int rewardSlotCount = cardData.getRewardSlots();
-        int multiplierSlotCount = cardData.getMultiplierSlots();
 
         Inventory inv = Bukkit.createInventory(null, size,
                 MiniMessage.miniMessage().deserialize(titleRaw));
 
-        // 填充背景
         fillBackground(inv, cardData);
 
         Random random = new Random();
@@ -128,7 +126,9 @@ public class TicketListener implements Listener {
 
         player.openInventory(inv);
         sessions.put(player.getUniqueId(), session);
-        player.getWorld().playSound(player.getLocation(), Sound.BLOCK_ANVIL_LAND, 0.5f, 1.0f);
+
+        // 打开音效（从配置读取）
+        playSound(player, cardData.getSounds().getOpen(), 0.5f, 1.0f);
     }
 
     /**
@@ -153,7 +153,6 @@ public class TicketListener implements Listener {
 
             if (session.scratched[i]) {
                 if (i < rewardSlotCount) {
-                    // 奖励槽已刮开
                     String rewardKey = session.rewardResults.get(i);
                     CardData.RewardEntry entry = cardData.getRewardByKey(rewardKey);
                     double baseReward = (entry != null) ? entry.getReward() : 0;
@@ -170,7 +169,6 @@ public class TicketListener implements Listener {
                     displayItem.setItemMeta(meta);
                     inv.setItem(slot, displayItem);
                 } else {
-                    // 倍率槽已刮开
                     int multIndex = i - rewardSlotCount;
                     int multiplierValue = session.multiplierResults.get(multIndex);
                     Material displayMat = getMultiplierDisplayMaterial(multiplierValue);
@@ -182,7 +180,6 @@ public class TicketListener implements Listener {
                     inv.setItem(slot, multItem);
                 }
             } else {
-                // 未刮开
                 ItemStack bedrock = new ItemStack(Material.BEDROCK);
                 ItemMeta bMeta = bedrock.getItemMeta();
                 bMeta.displayName(Component.text("§f§l?"));
@@ -195,7 +192,7 @@ public class TicketListener implements Listener {
         player.openInventory(inv);
     }
 
-    // ========== 背景填充（统一方法） ==========
+    // ========== 背景填充 ==========
 
     private void fillBackground(Inventory inv, CardData cardData) {
         int size = cardData.getUiSize();
@@ -207,12 +204,10 @@ public class TicketListener implements Listener {
         bgMeta.displayName(Component.text(" "));
         bg.setItemMeta(bgMeta);
 
-        // 默认背景
         for (int i = 0; i < size; i++) {
             inv.setItem(i, bg);
         }
 
-        // 如果有高亮材质，绘制倍率槽四周高亮
         if (highlightMat != null) {
             Set<Integer> highlightSlots = cardData.getHighlightSlots();
             ItemStack highlight = new ItemStack(highlightMat);
@@ -221,7 +216,6 @@ public class TicketListener implements Listener {
             highlight.setItemMeta(hlMeta);
 
             for (int slot : highlightSlots) {
-                // 只替换在范围内的槽位，且不覆盖按钮槽位
                 boolean isButton = false;
                 for (int bs : cardData.getSlotPositions()) {
                     if (bs == slot) { isButton = true; break; }
@@ -230,6 +224,20 @@ public class TicketListener implements Listener {
                     inv.setItem(slot, highlight);
                 }
             }
+        }
+    }
+
+    // ========== 音效工具方法 ==========
+
+    /**
+     * 根据音效名称播放音效，如果名称无效则静默忽略
+     */
+    private void playSound(Player player, String soundName, float volume, float pitch) {
+        try {
+            Sound sound = Sound.valueOf(soundName);
+            player.getWorld().playSound(player.getLocation(), sound, volume, pitch);
+        } catch (IllegalArgumentException e) {
+            // 音效名称无效，跳过
         }
     }
 
@@ -302,6 +310,7 @@ public class TicketListener implements Listener {
         session.remaining--;
 
         CardData cardData = session.cardData;
+        CardData.SoundConfig sounds = cardData.getSounds();
         int rewardSlotCount = cardData.getRewardSlots();
         double globalMult = plugin.getMultiplier();
 
@@ -317,10 +326,10 @@ public class TicketListener implements Listener {
             double actualReward = baseReward * globalMult;
             if (actualReward > 0) {
                 meta.displayName(Component.text("§e§l+" + formatMoney(actualReward) + " 金币"));
-                player.getWorld().playSound(player.getLocation(), Sound.ENTITY_VILLAGER_CELEBRATE, 1.0f, 1.0f);
+                playSound(player, sounds.getReward(), 1.0f, 1.0f);
             } else {
                 meta.displayName(Component.text("§c§l谢谢参与"));
-                player.getWorld().playSound(player.getLocation(), Sound.ENTITY_VILLAGER_HURT, 1.0f, 1.0f);
+                playSound(player, sounds.getEmpty(), 1.0f, 1.0f);
             }
             displayItem.setItemMeta(meta);
             event.getInventory().setItem(slot, displayItem);
@@ -336,12 +345,18 @@ public class TicketListener implements Listener {
             multItem.setItemMeta(meta);
             event.getInventory().setItem(slot, multItem);
 
-            float pitch = 0.6f + (multiplierValue - 1) * 0.25f;
+            // 倍率音效：根据配置的音效名称和音高范围计算
+            float pitchMin = sounds.getMultiplierPitchMin();
+            float pitchMax = sounds.getMultiplierPitchMax();
+            int maxMult = 5;
+            float pitch = pitchMin + (float)(multiplierValue - 1) / (maxMult - 1) * (pitchMax - pitchMin);
             if (pitch > 2.0f) pitch = 2.0f;
-            player.getWorld().playSound(player.getLocation(), Sound.BLOCK_NOTE_BLOCK_HARP, 1.0f, pitch);
+            if (pitch < 0.5f) pitch = 0.5f;
+            playSound(player, sounds.getMultiplierSound(), 1.0f, pitch);
         }
 
-        player.getWorld().playSound(player.getLocation(), Sound.BLOCK_GRINDSTONE_USE, 0.5f, 1.0f);
+        // 刮卡音效
+        playSound(player, sounds.getScratch(), 0.5f, 1.0f);
 
         // ---- 全部刮完 ----
         if (session.remaining == 0) {
@@ -368,7 +383,7 @@ public class TicketListener implements Listener {
             ScratchPlugin.getEconomy().depositPlayer(player, totalFinal);
             player.sendMessage("§a你获得了 §e" + formatMoney(totalFinal) + " 金币！");
 
-            // 全服公告（金卡和钻石卡用 CardType 判断）
+            // 全服公告
             CardType type = CardType.valueOf(cardData.getName().toUpperCase());
             if (type == CardType.GOLD || type == CardType.DIAMOND) {
                 double actualPrice = cardData.getPrice() * globalMult;
@@ -381,7 +396,9 @@ public class TicketListener implements Listener {
             }
 
             session.completed = true;
-            player.getWorld().playSound(player.getLocation(), Sound.ENTITY_FIREWORK_ROCKET_LAUNCH, 1.0f, 1.0f);
+
+            // 完成音效
+            playSound(player, sounds.getComplete(), 1.0f, 1.0f);
 
             Bukkit.getScheduler().runTaskLater(plugin, () -> {
                 if (player.isOnline()) player.closeInventory();

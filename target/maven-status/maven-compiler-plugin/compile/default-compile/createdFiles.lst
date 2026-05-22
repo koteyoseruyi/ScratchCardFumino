@@ -6,6 +6,7 @@ com\example\scratch\CardData.class
 com\example\scratch\CardType.class
 com\example\scratch\AdminCommand.class
 com\example\scratch\CardData$MultiplierEntry.class
+com\example\scratch\CardData$SoundConfig.class
 com\example\scratch\CardData$RewardEntry.class
 com\example\scratch\TicketListener$CardSession.class
 com\example\scratch\ScratchPlugin.class
