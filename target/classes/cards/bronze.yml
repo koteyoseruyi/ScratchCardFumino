@@ -1,0 +1,25 @@
+display: "<gradient:#CD7F32:#FFD700>铜刮刮卡</gradient>"
+lore:
+  - "<gray>右键打开，有3次刮奖机会"
+slot-count: 3
+price: 1.0
+bonus-enabled: false
+reward-slots: 3
+multiplier-slots: 0
+
+# 界面配置
+ui:
+  size: 27
+  title: "<gradient:#CD7F32:#FFD700>铜刮刮卡</gradient>"
+  background-material: BROWN_STAINED_GLASS_PANE
+  # 奖励槽位列表（所有可刮的槽位，前 reward-slots 个为奖励槽，剩余为倍率槽）
+  slot-positions:
+    - 11
+    - 13
+    - 15
+
+rewards:
+  EMPTY:   { weight: 44, reward: 0.0 }
+  SMALL:   { weight: 35, reward: 0.3 }
+  MEDIUM:  { weight: 14, reward: 0.6 }
+  LARGE:   { weight: 7,  reward: 1.8 }

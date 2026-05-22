@@ -1,5 +1,25 @@
 name: ScratchCardFumino
-version: 1.1
+version: 1.1name: ScratchCardFumino
+version: 1.2
+main: com.example.scratch.ScratchPlugin
+api-version: "1.21"
+depend: [Vault]
+commands:
+  getcard:
+    description: 管理员给予刮刮卡
+    usage: /getcard <玩家> <种类> <数量>
+    permission: scratchcard.admin
+  buycard:
+    description: 购买刮刮卡
+    usage: /buycard <种类> <数量>
+  scratchshop:
+    description: 打开刮刮卡商店
+    usage: /scratchshop
+    aliases: [shop]
+permissions:
+  scratchcard.admin:
+    default: op
+
 main: com.example.scratch.ScratchPlugin
 api-version: "1.21"
 depend: [Vault]

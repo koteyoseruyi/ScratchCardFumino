@@ -1,0 +1,27 @@
+display: "<gradient:#FFD700:#FFA500>金刮刮卡</gradient>"
+lore:
+  - "<gray>右键打开，有5次刮奖机会"
+slot-count: 5
+price: 5.0
+bonus-enabled: true
+reward-slots: 5
+multiplier-slots: 0
+
+# 界面配置
+ui:
+  size: 27
+  title: "<gradient:#FFD700:#FFA500>金刮刮卡</gradient>"
+  background-material: YELLOW_STAINED_GLASS_PANE
+  slot-positions:
+    - 3
+    - 5
+    - 13
+    - 21
+    - 23
+
+rewards:
+  EMPTY:   { weight: 30, reward: 0.0 }
+  SMALL:   { weight: 30, reward: 0.6 }
+  MEDIUM:  { weight: 20, reward: 1.0 }
+  LARGE:   { weight: 15, reward: 2.5 }
+  HUGE:    { weight: 5,  reward: 7.0 }

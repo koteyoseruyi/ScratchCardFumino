@@ -1,0 +1,38 @@
+display: "<gradient:#00FFFF:#0080FF>钻石刮刮卡</gradient>"
+lore:
+  - "<gray>右键打开，有8次刮奖机会"
+slot-count: 8
+price: 20.0
+bonus-enabled: true
+reward-slots: 5
+multiplier-slots: 3
+
+# 界面配置
+ui:
+  size: 54
+  title: "<gradient:#00FFFF:#0080FF>钻石刮刮卡</gradient>"
+  background-material: LIGHT_BLUE_STAINED_GLASS_PANE
+  slot-positions:
+    - 4
+    - 11
+    - 15
+    - 21
+    - 23
+    - 38
+    - 40
+    - 42
+  # 倍率槽周围高亮材质（可选，如果不配置则无高亮）
+  highlight-material: BLUE_STAINED_GLASS_PANE
+
+rewards:
+  EMPTY:   { weight: 30, reward: 0.0 }
+  SMALL:   { weight: 30, reward: 0.6 }
+  MEDIUM:  { weight: 20, reward: 1.0 }
+  LARGE:   { weight: 15, reward: 2.5 }
+  HUGE:    { weight: 5,  reward: 7.0 }
+multipliers:
+  "1": { weight: 55 }
+  "2": { weight: 35 }
+  "3": { weight: 7 }
+  "4": { weight: 2.2 }
+  "5": { weight: 0.8 }

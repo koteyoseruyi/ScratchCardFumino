@@ -6,6 +6,7 @@ import org.bukkit.NamespacedKey;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
+import org.bukkit.command.TabCompleter;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
@@ -14,8 +15,9 @@ import net.kyori.adventure.text.minimessage.MiniMessage;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Collectors;
 
-public class AdminCommand implements CommandExecutor {
+public class AdminCommand implements CommandExecutor, TabCompleter {
 
     private final ScratchPlugin plugin;
 
@@ -32,7 +34,7 @@ public class AdminCommand implements CommandExecutor {
 
         if (args.length < 3) {
             sender.sendMessage("§c用法: /getcard <玩家> <种类> <数量>");
-            sender.sendMessage("§c种类: bronze, gold, diamond");
+            sender.sendMessage("§c可用种类: " + String.join(", ", plugin.getCardLoader().getCardNames()));
             return true;
         }
 
@@ -42,11 +44,28 @@ public class AdminCommand implements CommandExecutor {
             return true;
         }
 
-        CardType type;
+        // 支持用 CardType 枚举名或配置文件名
+        CardType type = null;
+        String typeInput = args[1].toUpperCase();
         try {
-            type = CardType.valueOf(args[1].toUpperCase());
+            type = CardType.valueOf(typeInput);
         } catch (IllegalArgumentException e) {
-            sender.sendMessage("§c无效的卡种类！请使用：bronze, gold, diamond");
+            // 尝试通过文件名查找
+            for (CardType ct : CardType.values()) {
+                if (ct.name().equalsIgnoreCase(args[1])) {
+                    type = ct;
+                    break;
+                }
+            }
+            if (type == null) {
+                sender.sendMessage("§c无效的卡种类！可用: " + String.join(", ", plugin.getCardLoader().getCardNames()));
+                return true;
+            }
+        }
+
+        // 检查该卡片是否有配置数据
+        if (plugin.getCardLoader().getCardData(type) == null) {
+            sender.sendMessage("§c该刮刮卡没有有效的配置文件！");
             return true;
         }
 
@@ -67,9 +86,11 @@ public class AdminCommand implements CommandExecutor {
     }
 
     private ItemStack buildCard(CardType type) {
-        String path = "cards." + type.name().toLowerCase() + ".";
-        String displayStr = plugin.getConfig().getString(path + "display");
-        List<String> lore = plugin.getConfig().getStringList(path + "lore");
+        CardData cardData = plugin.getCardLoader().getCardData(type);
+        if (cardData == null) return null;
+
+        String displayStr = cardData.getDisplay();
+        List<String> lore = cardData.getLore();
 
         ItemStack card = new ItemStack(Material.PAPER);
         ItemMeta meta = card.getItemMeta();
@@ -85,5 +106,35 @@ public class AdminCommand implements CommandExecutor {
         meta.getPersistentDataContainer().set(key, PersistentDataType.STRING, type.name());
         card.setItemMeta(meta);
         return card;
+    }
+
+    // ========== Tab 补全 ==========
+
+    @Override
+    public List<String> onTabComplete(CommandSender sender, Command command, String alias, String[] args) {
+        if (!sender.hasPermission("scratchcard.admin")) return List.of();
+
+        if (args.length == 1) {
+            // 补全在线玩家
+            String partial = args[0].toLowerCase();
+            return Bukkit.getOnlinePlayers().stream()
+                    .map(Player::getName)
+                    .filter(name -> name.toLowerCase().startsWith(partial))
+                    .collect(Collectors.toList());
+        }
+
+        if (args.length == 2) {
+            // 补全卡片种类（从 CardLoader 获取）
+            String partial = args[1].toLowerCase();
+            return plugin.getCardLoader().getCardNames().stream()
+                    .filter(name -> name.startsWith(partial))
+                    .collect(Collectors.toList());
+        }
+
+        if (args.length == 3) {
+            return List.of("<数量>");
+        }
+
+        return List.of();
     }
 }
