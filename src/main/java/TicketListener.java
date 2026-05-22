@@ -14,6 +14,8 @@ import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.persistence.PersistentDataType;
+import org.bukkit.potion.PotionEffect;
+import org.bukkit.potion.PotionEffectType;
 
 import java.util.*;
 
@@ -23,7 +25,6 @@ public class TicketListener implements Listener {
     private final NamespacedKey cardTypeKey;
     private final Map<UUID, CardSession> sessions = new HashMap<>();
 
-    // 奖励类型 → 显示物品 固定映射
     private static final Map<String, Material> REWARD_MATERIAL_MAP = new HashMap<>();
     static {
         REWARD_MATERIAL_MAP.put("EMPTY", Material.BARRIER);
@@ -33,7 +34,6 @@ public class TicketListener implements Listener {
         REWARD_MATERIAL_MAP.put("HUGE", Material.EMERALD);
     }
 
-    // 倍率值 → 显示物品 固定映射
     private static final Map<Integer, Material> MULTIPLIER_MATERIAL_MAP = new HashMap<>();
     static {
         MULTIPLIER_MATERIAL_MAP.put(1, Material.QUARTZ);
@@ -41,6 +41,44 @@ public class TicketListener implements Listener {
         MULTIPLIER_MATERIAL_MAP.put(3, Material.NETHERITE_SCRAP);
         MULTIPLIER_MATERIAL_MAP.put(4, Material.NETHER_STAR);
         MULTIPLIER_MATERIAL_MAP.put(5, Material.DRAGON_EGG);
+    }
+
+    private static final List<PotionEffectType> WITCH_PRESET1_EFFECTS = new ArrayList<>();
+    static {
+        WITCH_PRESET1_EFFECTS.add(PotionEffectType.SPEED);
+        WITCH_PRESET1_EFFECTS.add(PotionEffectType.HASTE);
+        WITCH_PRESET1_EFFECTS.add(PotionEffectType.RESISTANCE);
+        WITCH_PRESET1_EFFECTS.add(PotionEffectType.JUMP_BOOST);
+        WITCH_PRESET1_EFFECTS.add(PotionEffectType.STRENGTH);
+        WITCH_PRESET1_EFFECTS.add(PotionEffectType.REGENERATION);
+        WITCH_PRESET1_EFFECTS.add(PotionEffectType.HEALTH_BOOST);
+        WITCH_PRESET1_EFFECTS.add(PotionEffectType.WATER_BREATHING);
+        WITCH_PRESET1_EFFECTS.add(PotionEffectType.INVISIBILITY);
+        WITCH_PRESET1_EFFECTS.add(PotionEffectType.NIGHT_VISION);
+        WITCH_PRESET1_EFFECTS.add(PotionEffectType.NAUSEA);
+        WITCH_PRESET1_EFFECTS.add(PotionEffectType.POISON);
+        WITCH_PRESET1_EFFECTS.add(PotionEffectType.WITHER);
+        WITCH_PRESET1_EFFECTS.add(PotionEffectType.HUNGER);
+        WITCH_PRESET1_EFFECTS.add(PotionEffectType.SLOWNESS);
+        WITCH_PRESET1_EFFECTS.add(PotionEffectType.WEAKNESS);
+        WITCH_PRESET1_EFFECTS.add(PotionEffectType.MINING_FATIGUE);
+    }
+
+    private static final List<PotionEffectType> ALL_POSITIVE_EFFECTS = new ArrayList<>();
+    static {
+        ALL_POSITIVE_EFFECTS.add(PotionEffectType.SPEED);
+        ALL_POSITIVE_EFFECTS.add(PotionEffectType.HASTE);
+        ALL_POSITIVE_EFFECTS.add(PotionEffectType.RESISTANCE);
+        ALL_POSITIVE_EFFECTS.add(PotionEffectType.JUMP_BOOST);
+        ALL_POSITIVE_EFFECTS.add(PotionEffectType.STRENGTH);
+        ALL_POSITIVE_EFFECTS.add(PotionEffectType.REGENERATION);
+        ALL_POSITIVE_EFFECTS.add(PotionEffectType.HEALTH_BOOST);
+        ALL_POSITIVE_EFFECTS.add(PotionEffectType.WATER_BREATHING);
+        ALL_POSITIVE_EFFECTS.add(PotionEffectType.INVISIBILITY);
+        ALL_POSITIVE_EFFECTS.add(PotionEffectType.NIGHT_VISION);
+        ALL_POSITIVE_EFFECTS.add(PotionEffectType.DOLPHINS_GRACE);
+        ALL_POSITIVE_EFFECTS.add(PotionEffectType.CONDUIT_POWER);
+        ALL_POSITIVE_EFFECTS.add(PotionEffectType.LUCK);
     }
 
     public TicketListener(ScratchPlugin plugin) {
@@ -74,17 +112,21 @@ public class TicketListener implements Listener {
 
         event.setCancelled(true);
 
-        // 消耗手中一张卡
         item.setAmount(item.getAmount() - 1);
         event.getPlayer().getInventory().setItemInMainHand(item);
 
-        openCard(event.getPlayer(), cardData);
+        if (cardData.isMisc()) {
+            openMiscCard(event.getPlayer(), cardData);
+        } else {
+            openEcoCard(event.getPlayer(), cardData);
+        }
     }
 
-    /**
-     * 打开刮刮卡界面
-     */
-    private void openCard(Player player, CardData cardData) {
+    // ================================================================
+    //  ECO 类卡片
+    // ================================================================
+
+    private void openEcoCard(Player player, CardData cardData) {
         int size = cardData.getUiSize();
         String titleRaw = cardData.getUiTitle();
         int[] buttonSlots = cardData.getSlotPositions();
@@ -93,108 +135,29 @@ public class TicketListener implements Listener {
         Inventory inv = Bukkit.createInventory(null, size,
                 MiniMessage.miniMessage().deserialize(titleRaw));
 
-        fillBackground(inv, cardData);
+        fillEcoBackground(inv, cardData);
 
         Random random = new Random();
         CardSession session = new CardSession(cardData, buttonSlots.length);
 
-        // 生成奖励槽结果
         for (int i = 0; i < rewardSlotCount; i++) {
-            int slot = buttonSlots[i];
-            String rewardKey = getRandomReward(cardData, random);
-            session.rewardResults.add(rewardKey);
-
-            ItemStack bedrock = new ItemStack(Material.BEDROCK);
-            ItemMeta bMeta = bedrock.getItemMeta();
-            bMeta.displayName(Component.text("§f§l?"));
-            bedrock.setItemMeta(bMeta);
-            inv.setItem(slot, bedrock);
+            session.rewardResults.add(getRandomReward(cardData, random));
+        }
+        for (int i = rewardSlotCount; i < buttonSlots.length; i++) {
+            session.multiplierResults.add(getRandomMultiplier(cardData, random));
         }
 
-        // 生成倍率槽结果
-        for (int i = rewardSlotCount; i < buttonSlots.length; i++) {
-            int slot = buttonSlots[i];
-            int multiplierValue = getRandomMultiplier(cardData, random);
-            session.multiplierResults.add(multiplierValue);
-
-            ItemStack bedrock = new ItemStack(Material.BEDROCK);
-            ItemMeta bMeta = bedrock.getItemMeta();
-            bMeta.displayName(Component.text("§f§l?"));
-            bedrock.setItemMeta(bMeta);
-            inv.setItem(slot, bedrock);
+        // 放置按钮
+        for (int i = 0; i < buttonSlots.length; i++) {
+            inv.setItem(buttonSlots[i], createBedrockButton());
         }
 
         player.openInventory(inv);
         sessions.put(player.getUniqueId(), session);
-
-        // 打开音效（从配置读取）
         playSound(player, cardData.getSounds().getOpen(), 0.5f, 1.0f);
     }
 
-    /**
-     * 重新打开界面（保留已刮进度）
-     */
-    private void reopenCard(Player player, CardSession session) {
-        CardData cardData = session.cardData;
-        int size = cardData.getUiSize();
-        String titleRaw = cardData.getUiTitle();
-        int[] buttonSlots = cardData.getSlotPositions();
-        int rewardSlotCount = cardData.getRewardSlots();
-
-        Inventory inv = Bukkit.createInventory(null, size,
-                MiniMessage.miniMessage().deserialize(titleRaw));
-
-        fillBackground(inv, cardData);
-
-        double globalMult = plugin.getMultiplier();
-
-        for (int i = 0; i < buttonSlots.length; i++) {
-            int slot = buttonSlots[i];
-
-            if (session.scratched[i]) {
-                if (i < rewardSlotCount) {
-                    String rewardKey = session.rewardResults.get(i);
-                    CardData.RewardEntry entry = cardData.getRewardByKey(rewardKey);
-                    double baseReward = (entry != null) ? entry.getReward() : 0;
-                    Material displayMat = getRewardDisplayMaterial(rewardKey);
-
-                    ItemStack displayItem = new ItemStack(displayMat);
-                    ItemMeta meta = displayItem.getItemMeta();
-                    double actualReward = baseReward * globalMult;
-                    if (actualReward > 0) {
-                        meta.displayName(Component.text("§e§l+" + formatMoney(actualReward) + " 金币"));
-                    } else {
-                        meta.displayName(Component.text("§c§l谢谢参与"));
-                    }
-                    displayItem.setItemMeta(meta);
-                    inv.setItem(slot, displayItem);
-                } else {
-                    int multIndex = i - rewardSlotCount;
-                    int multiplierValue = session.multiplierResults.get(multIndex);
-                    Material displayMat = getMultiplierDisplayMaterial(multiplierValue);
-
-                    ItemStack multItem = new ItemStack(displayMat);
-                    ItemMeta meta = multItem.getItemMeta();
-                    meta.displayName(Component.text("§e§l×" + multiplierValue));
-                    multItem.setItemMeta(meta);
-                    inv.setItem(slot, multItem);
-                }
-            } else {
-                ItemStack bedrock = new ItemStack(Material.BEDROCK);
-                ItemMeta bMeta = bedrock.getItemMeta();
-                bMeta.displayName(Component.text("§f§l?"));
-                bedrock.setItemMeta(bMeta);
-                inv.setItem(slot, bedrock);
-            }
-        }
-
-        sessions.put(player.getUniqueId(), session);
-        player.openInventory(inv);
-    }
-
-    // ========== 背景填充 ==========
-
-    private void fillBackground(Inventory inv, CardData cardData) {
+    private void fillEcoBackground(Inventory inv, CardData cardData) {
         int size = cardData.getUiSize();
         Material bgMat = cardData.getBackgroundMaterial();
         Material highlightMat = cardData.getHighlightMaterial();
@@ -215,33 +178,139 @@ public class TicketListener implements Listener {
             hlMeta.displayName(Component.text(" "));
             highlight.setItemMeta(hlMeta);
 
+            Set<Integer> buttonSet = new HashSet<>();
+            for (int bs : cardData.getSlotPositions()) buttonSet.add(bs);
+
             for (int slot : highlightSlots) {
-                boolean isButton = false;
-                for (int bs : cardData.getSlotPositions()) {
-                    if (bs == slot) { isButton = true; break; }
-                }
-                if (!isButton && slot >= 0 && slot < size) {
+                if (!buttonSet.contains(slot) && slot >= 0 && slot < size) {
                     inv.setItem(slot, highlight);
                 }
             }
         }
     }
 
-    // ========== 音效工具方法 ==========
+    // ================================================================
+    //  MISC 类卡片（女巫卡）
+    // ================================================================
 
-    /**
-     * 根据音效名称播放音效，如果名称无效则静默忽略
-     */
+    private void openMiscCard(Player player, CardData cardData) {
+        int size = cardData.getUiSize();
+        String titleRaw = cardData.getUiTitle();
+        int[] buttonSlots = cardData.getSlotPositions();
+
+        Inventory inv = Bukkit.createInventory(null, size,
+                MiniMessage.miniMessage().deserialize(titleRaw));
+
+        fillWitchBackground(inv);
+
+        Random random = new Random();
+        CardSession session = new CardSession(cardData, buttonSlots.length);
+
+        double roll = random.nextDouble() * 100;
+        int preset;
+        if (roll < 1.0) {
+            preset = 3;
+        } else if (roll < 2.0) {
+            preset = 2;
+        } else {
+            preset = 1;
+        }
+        session.witchPreset = preset;
+
+        if (preset == 1) {
+            session.witchBottleEffects = new PotionEffectType[3];
+            for (int i = 0; i < 3; i++) {
+                session.witchBottleEffects[i] = WITCH_PRESET1_EFFECTS.get(random.nextInt(WITCH_PRESET1_EFFECTS.size()));
+            }
+            int[] timeBases = {30, 60, 120, 240};
+            session.witchTimeBase = timeBases[random.nextInt(timeBases.length)];
+            double[] tMultipliers = {0.5, 1.0, 1.5};
+            session.witchTimeMultiplier = tMultipliers[random.nextInt(tMultipliers.length)];
+        }
+
+        for (int slot : buttonSlots) {
+            inv.setItem(slot, createBedrockButton());
+        }
+
+        player.openInventory(inv);
+        sessions.put(player.getUniqueId(), session);
+        playSound(player, cardData.getSounds().getOpen(), 0.5f, 1.0f);
+    }
+
+    private void fillWitchBackground(Inventory inv) {
+        ItemStack purple = new ItemStack(Material.PURPLE_STAINED_GLASS_PANE);
+        ItemMeta purpleMeta = purple.getItemMeta();
+        purpleMeta.displayName(Component.text(" "));
+        purple.setItemMeta(purpleMeta);
+        for (int i = 0; i < 54; i++) {
+            inv.setItem(i, purple);
+        }
+
+        // 钟1（16）周围一圈黄色玻璃板
+        fillSlot(inv, 7, Material.YELLOW_STAINED_GLASS_PANE);
+        fillSlot(inv, 15, Material.YELLOW_STAINED_GLASS_PANE);
+        fillSlot(inv, 17, Material.YELLOW_STAINED_GLASS_PANE);
+        fillSlot(inv, 25, Material.YELLOW_STAINED_GLASS_PANE);
+
+        // 钟2（43）周围一圈橙色玻璃板
+        fillSlot(inv, 34, Material.ORANGE_STAINED_GLASS_PANE);
+        fillSlot(inv, 42, Material.ORANGE_STAINED_GLASS_PANE);
+        fillSlot(inv, 44, Material.ORANGE_STAINED_GLASS_PANE);
+        fillSlot(inv, 52, Material.ORANGE_STAINED_GLASS_PANE);
+
+        // 最后一行（45-53）红色玻璃板（按钮位置除外）
+        int[] buttonSlots = {16, 21, 29, 31, 43};
+        Set<Integer> buttonSet = new HashSet<>();
+        for (int b : buttonSlots) buttonSet.add(b);
+        for (int i = 45; i <= 53; i++) {
+            if (!buttonSet.contains(i)) {
+                fillSlot(inv, i, Material.RED_STAINED_GLASS_PANE);
+            }
+        }
+
+        // 黑色玻璃板
+        fillSlot(inv, 10, Material.BLACK_STAINED_GLASS_PANE);
+        fillSlot(inv, 14, Material.BLACK_STAINED_GLASS_PANE);
+        fillSlot(inv, 19, Material.BLACK_STAINED_GLASS_PANE);
+        fillSlot(inv, 23, Material.BLACK_STAINED_GLASS_PANE);
+        fillSlot(inv, 28, Material.BLACK_STAINED_GLASS_PANE);
+        fillSlot(inv, 32, Material.BLACK_STAINED_GLASS_PANE);
+
+        // 浅蓝色玻璃板
+        fillSlot(inv, 11, Material.LIGHT_BLUE_STAINED_GLASS_PANE);
+        fillSlot(inv, 12, Material.LIGHT_BLUE_STAINED_GLASS_PANE);
+        fillSlot(inv, 13, Material.LIGHT_BLUE_STAINED_GLASS_PANE);
+        fillSlot(inv, 20, Material.LIGHT_BLUE_STAINED_GLASS_PANE);
+        fillSlot(inv, 22, Material.LIGHT_BLUE_STAINED_GLASS_PANE);
+        fillSlot(inv, 30, Material.LIGHT_BLUE_STAINED_GLASS_PANE);
+    }
+
+    private void fillSlot(Inventory inv, int slot, Material material) {
+        ItemStack item = new ItemStack(material);
+        ItemMeta meta = item.getItemMeta();
+        meta.displayName(Component.text(" "));
+        item.setItemMeta(meta);
+        inv.setItem(slot, item);
+    }
+
+    // ================================================================
+    //  通用方法
+    // ================================================================
+
+    private ItemStack createBedrockButton() {
+        ItemStack bedrock = new ItemStack(Material.BEDROCK);
+        ItemMeta bMeta = bedrock.getItemMeta();
+        bMeta.displayName(Component.text("§f§l?"));
+        bedrock.setItemMeta(bMeta);
+        return bedrock;
+    }
+
     private void playSound(Player player, String soundName, float volume, float pitch) {
         try {
             Sound sound = Sound.valueOf(soundName);
             player.getWorld().playSound(player.getLocation(), sound, volume, pitch);
-        } catch (IllegalArgumentException e) {
-            // 音效名称无效，跳过
-        }
+        } catch (IllegalArgumentException ignored) {}
     }
-
-    // ========== 随机选择 ==========
 
     private String getRandomReward(CardData cardData, Random random) {
         List<CardData.RewardEntry> rewards = cardData.getRewards();
@@ -272,8 +341,6 @@ public class TicketListener implements Listener {
         return 1;
     }
 
-    // ========== 物品映射 ==========
-
     private Material getRewardDisplayMaterial(String rewardKey) {
         return REWARD_MATERIAL_MAP.getOrDefault(rewardKey, Material.BARRIER);
     }
@@ -282,7 +349,9 @@ public class TicketListener implements Listener {
         return MULTIPLIER_MATERIAL_MAP.getOrDefault(multiplierValue, Material.QUARTZ);
     }
 
-    // ========== 点击刮卡 ==========
+    // ================================================================
+    //  点击事件
+    // ================================================================
 
     @EventHandler
     public void onInventoryClick(InventoryClickEvent event) {
@@ -309,13 +378,22 @@ public class TicketListener implements Listener {
         session.scratched[index] = true;
         session.remaining--;
 
+        if (session.cardData.isEco()) {
+            handleEcoCardClick(player, session, index, slot);
+        } else {
+            handleMiscCardClick(player, session, index, slot);
+        }
+    }
+
+    // ========== ECO 卡片点击 ==========
+
+    private void handleEcoCardClick(Player player, CardSession session, int index, int slot) {
         CardData cardData = session.cardData;
         CardData.SoundConfig sounds = cardData.getSounds();
         int rewardSlotCount = cardData.getRewardSlots();
         double globalMult = plugin.getMultiplier();
 
         if (index < rewardSlotCount) {
-            // ===== 奖励槽 =====
             String rewardKey = session.rewardResults.get(index);
             CardData.RewardEntry entry = cardData.getRewardByKey(rewardKey);
             double baseReward = (entry != null) ? entry.getReward() : 0;
@@ -332,9 +410,8 @@ public class TicketListener implements Listener {
                 playSound(player, sounds.getEmpty(), 1.0f, 1.0f);
             }
             displayItem.setItemMeta(meta);
-            event.getInventory().setItem(slot, displayItem);
+            player.getOpenInventory().getTopInventory().setItem(slot, displayItem);
         } else {
-            // ===== 倍率槽 =====
             int multIndex = index - rewardSlotCount;
             int multiplierValue = session.multiplierResults.get(multIndex);
             Material displayMat = getMultiplierDisplayMaterial(multiplierValue);
@@ -343,70 +420,240 @@ public class TicketListener implements Listener {
             ItemMeta meta = multItem.getItemMeta();
             meta.displayName(Component.text("§e§l×" + multiplierValue));
             multItem.setItemMeta(meta);
-            event.getInventory().setItem(slot, multItem);
+            player.getOpenInventory().getTopInventory().setItem(slot, multItem);
 
-            // 倍率音效：根据配置的音效名称和音高范围计算
             float pitchMin = sounds.getMultiplierPitchMin();
             float pitchMax = sounds.getMultiplierPitchMax();
-            int maxMult = 5;
-            float pitch = pitchMin + (float)(multiplierValue - 1) / (maxMult - 1) * (pitchMax - pitchMin);
+            float pitch = pitchMin + (float)(multiplierValue - 1) / 4.0f * (pitchMax - pitchMin);
             if (pitch > 2.0f) pitch = 2.0f;
             if (pitch < 0.5f) pitch = 0.5f;
             playSound(player, sounds.getMultiplierSound(), 1.0f, pitch);
         }
 
-        // 刮卡音效
         playSound(player, sounds.getScratch(), 0.5f, 1.0f);
 
-        // ---- 全部刮完 ----
         if (session.remaining == 0) {
-            double totalFinal;
-
-            if (cardData.isBonusEnabled()) {
-                totalFinal = calculateBonusTotal(session.rewardResults, cardData);
-            } else {
-                totalFinal = 0;
-                for (String key : session.rewardResults) {
-                    CardData.RewardEntry entry = cardData.getRewardByKey(key);
-                    if (entry != null) totalFinal += entry.getReward();
-                }
-            }
-
-            totalFinal *= globalMult;
-
-            double multProduct = 1;
-            for (int mv : session.multiplierResults) {
-                multProduct *= mv;
-            }
-            totalFinal *= multProduct;
-
-            ScratchPlugin.getEconomy().depositPlayer(player, totalFinal);
-            player.sendMessage("§a你获得了 §e" + formatMoney(totalFinal) + " 金币！");
-
-            // 全服公告
-            CardType type = CardType.valueOf(cardData.getName().toUpperCase());
-            if (type == CardType.GOLD || type == CardType.DIAMOND) {
-                double actualPrice = cardData.getPrice() * globalMult;
-                if (totalFinal > 2 * actualPrice) {
-                    String cardDisplayName = (type == CardType.GOLD) ? "金刮刮卡" : "钻石刮刮卡";
-                    String message = "<gradient:#FF0000:#FF8C00:#FFFF00:#00FF00:#00BFFF:#8A2BE2>" +
-                            "[ScratchCardFumino]恭喜" + player.getName() + "在" + cardDisplayName + "中赢得了" + formatMoney(totalFinal) + "金币!</gradient>";
-                    Bukkit.getServer().broadcast(MiniMessage.miniMessage().deserialize(message));
-                }
-            }
-
-            session.completed = true;
-
-            // 完成音效
-            playSound(player, sounds.getComplete(), 1.0f, 1.0f);
-
-            Bukkit.getScheduler().runTaskLater(plugin, () -> {
-                if (player.isOnline()) player.closeInventory();
-            }, 20L);
+            completeEcoCard(player, session);
         }
     }
 
-    // ========== 加成计算 ==========
+    private void completeEcoCard(Player player, CardSession session) {
+        CardData cardData = session.cardData;
+        double globalMult = plugin.getMultiplier();
+        double totalFinal;
+
+        if (cardData.isBonusEnabled()) {
+            totalFinal = calculateBonusTotal(session.rewardResults, cardData);
+        } else {
+            totalFinal = 0;
+            for (String key : session.rewardResults) {
+                CardData.RewardEntry entry = cardData.getRewardByKey(key);
+                if (entry != null) totalFinal += entry.getReward();
+            }
+        }
+
+        totalFinal *= globalMult;
+
+        double multProduct = 1;
+        for (int mv : session.multiplierResults) {
+            multProduct *= mv;
+        }
+        totalFinal *= multProduct;
+
+        ScratchPlugin.getEconomy().depositPlayer(player, totalFinal);
+        player.sendMessage("§a你获得了 §e" + formatMoney(totalFinal) + " 金币！");
+
+        plugin.getStatsManager().recordEarning(player.getUniqueId(), player.getName(), totalFinal);
+
+        CardType type = CardType.valueOf(cardData.getName().toUpperCase());
+        if (type == CardType.GOLD || type == CardType.DIAMOND) {
+            double actualPrice = cardData.getPrice() * globalMult;
+            if (totalFinal > 2 * actualPrice) {
+                String cardDisplayName = (type == CardType.GOLD) ? "金刮刮卡" : "钻石刮刮卡";
+                String message = "<gradient:#FF0000:#FF8C00:#FFFF00:#00FF00:#00BFFF:#8A2BE2>" +
+                        "[ScratchCardFumino]恭喜" + player.getName() + "在" + cardDisplayName + "中赢得了" + formatMoney(totalFinal) + "金币!</gradient>";
+                Bukkit.getServer().broadcast(MiniMessage.miniMessage().deserialize(message));
+            }
+        }
+
+        finishCard(player, session, cardData);
+    }
+
+    // ========== MISC 卡片（女巫卡）点击 ==========
+
+    private void handleMiscCardClick(Player player, CardSession session, int index, int slot) {
+        CardData cardData = session.cardData;
+        CardData.SoundConfig sounds = cardData.getSounds();
+        int preset = session.witchPreset;
+
+        if (preset == 1) {
+            if (index == 0) {
+                ItemStack clock = new ItemStack(Material.CLOCK);
+                ItemMeta meta = clock.getItemMeta();
+                meta.displayName(Component.text("§e§l" + session.witchTimeBase + "s"));
+                clock.setItemMeta(meta);
+                player.getOpenInventory().getTopInventory().setItem(slot, clock);
+                playSound(player, sounds.getReward(), 1.0f, 1.0f);
+            } else if (index == 4) {
+                ItemStack clock = new ItemStack(Material.CLOCK);
+                ItemMeta meta = clock.getItemMeta();
+                meta.displayName(Component.text("§e§l×" + session.witchTimeMultiplier));
+                clock.setItemMeta(meta);
+                player.getOpenInventory().getTopInventory().setItem(slot, clock);
+                playSound(player, sounds.getReward(), 1.0f, 1.0f);
+            } else {
+                int bottleIndex = index - 1;
+                PotionEffectType effectType = session.witchBottleEffects[bottleIndex];
+                boolean isPositive = isPositiveEffect(effectType);
+                Material mat = isPositive ? Material.POTION : Material.SPLASH_POTION;
+                String effectName = getEffectDisplayName(effectType);
+
+                ItemStack potion = new ItemStack(mat);
+                ItemMeta meta = potion.getItemMeta();
+                meta.displayName(Component.text((isPositive ? "§a" : "§c") + effectName));
+                potion.setItemMeta(meta);
+                player.getOpenInventory().getTopInventory().setItem(slot, potion);
+                playSound(player, sounds.getReward(), 1.0f, 1.0f);
+            }
+        } else if (preset == 2) {
+            if (index == 0 || index == 4) {
+                ItemStack barrier = new ItemStack(Material.BARRIER);
+                ItemMeta meta = barrier.getItemMeta();
+                meta.displayName(Component.text("§c§l致死毒药"));
+                barrier.setItemMeta(meta);
+                player.getOpenInventory().getTopInventory().setItem(slot, barrier);
+            } else {
+                ItemStack potion = new ItemStack(Material.SPLASH_POTION);
+                ItemMeta meta = potion.getItemMeta();
+                meta.displayName(Component.text("§c§l瞬间伤害"));
+                potion.setItemMeta(meta);
+                player.getOpenInventory().getTopInventory().setItem(slot, potion);
+            }
+            playSound(player, sounds.getEmpty(), 1.0f, 1.0f);
+        } else if (preset == 3) {
+            if (index == 0 || index == 4) {
+                ItemStack totem = new ItemStack(Material.TOTEM_OF_UNDYING);
+                ItemMeta meta = totem.getItemMeta();
+                meta.displayName(Component.text("§6§l稀世神药"));
+                totem.setItemMeta(meta);
+                player.getOpenInventory().getTopInventory().setItem(slot, totem);
+            } else {
+                ItemStack potion = new ItemStack(Material.POTION);
+                ItemMeta meta = potion.getItemMeta();
+                meta.displayName(Component.text("§6§l力量"));
+                potion.setItemMeta(meta);
+                player.getOpenInventory().getTopInventory().setItem(slot, potion);
+            }
+            playSound(player, sounds.getReward(), 1.0f, 1.0f);
+        }
+
+        playSound(player, sounds.getScratch(), 0.5f, 1.0f);
+
+        if (session.remaining == 0) {
+            completeWitchCard(player, session);
+        }
+    }
+
+    private void completeWitchCard(Player player, CardSession session) {
+        CardData cardData = session.cardData;
+        int preset = session.witchPreset;
+
+        if (preset == 1) {
+            int baseTime = session.witchTimeBase;
+            double multiplier = session.witchTimeMultiplier;
+            int duration = (int) (baseTime * multiplier * 20);
+
+            Map<PotionEffectType, Integer> effectCount = new HashMap<>();
+            for (PotionEffectType effect : session.witchBottleEffects) {
+                effectCount.put(effect, effectCount.getOrDefault(effect, 0) + 1);
+            }
+
+            for (Map.Entry<PotionEffectType, Integer> entry : effectCount.entrySet()) {
+                PotionEffectType type = entry.getKey();
+                int count = entry.getValue();
+                int amplifier = count - 1;
+
+                int actualDuration = isPositiveEffect(type) ? duration : duration / 2;
+                if (actualDuration < 20) actualDuration = 20;
+
+                player.addPotionEffect(new PotionEffect(type, actualDuration, amplifier, false, true));
+            }
+
+            player.sendMessage("§a你获得了药水效果！持续时间: §e" + (duration / 20) + " 秒");
+
+        } else if (preset == 2) {
+            player.setHealth(0);
+            String message = "<gradient:#8B0000:#FF0000>[ScratchCardFumino]" + player.getName() + "在女巫的刮刮卡中刮到了致死毒药!</gradient>";
+            Bukkit.getServer().broadcast(MiniMessage.miniMessage().deserialize(message));
+
+        } else if (preset == 3) {
+            for (PotionEffectType effect : ALL_POSITIVE_EFFECTS) {
+                player.addPotionEffect(new PotionEffect(effect, 300 * 20, 2, false, true));
+            }
+            String message = "<gradient:#C0C0C0:#FFD700>[ScratchCardFumino]" + player.getName() + "在女巫的刮刮卡中刮到了稀世神药!</gradient>";
+            Bukkit.getServer().broadcast(MiniMessage.miniMessage().deserialize(message));
+            player.sendMessage("§6§l你获得了所有正面效果 III (300秒)！");
+        }
+
+        finishCard(player, session, cardData);
+    }
+
+    private void finishCard(Player player, CardSession session, CardData cardData) {
+        session.completed = true;
+        playSound(player, cardData.getSounds().getComplete(), 1.0f, 1.0f);
+
+        Bukkit.getScheduler().runTaskLater(plugin, () -> {
+            if (player.isOnline()) player.closeInventory();
+        }, 20L);
+    }
+
+    // ================================================================
+    //  药水效果工具
+    // ================================================================
+
+    private boolean isPositiveEffect(PotionEffectType type) {
+        return type == PotionEffectType.SPEED ||
+                type == PotionEffectType.HASTE ||
+                type == PotionEffectType.RESISTANCE ||
+                type == PotionEffectType.JUMP_BOOST ||
+                type == PotionEffectType.STRENGTH ||
+                type == PotionEffectType.REGENERATION ||
+                type == PotionEffectType.HEALTH_BOOST ||
+                type == PotionEffectType.WATER_BREATHING ||
+                type == PotionEffectType.INVISIBILITY ||
+                type == PotionEffectType.NIGHT_VISION ||
+                type == PotionEffectType.DOLPHINS_GRACE ||
+                type == PotionEffectType.CONDUIT_POWER ||
+                type == PotionEffectType.LUCK;
+    }
+
+    private String getEffectDisplayName(PotionEffectType type) {
+        if (type == PotionEffectType.SPEED) return "速度";
+        if (type == PotionEffectType.HASTE) return "急迫";
+        if (type == PotionEffectType.RESISTANCE) return "抗性提升";
+        if (type == PotionEffectType.JUMP_BOOST) return "跳跃提升";
+        if (type == PotionEffectType.STRENGTH) return "力量";
+        if (type == PotionEffectType.REGENERATION) return "生命恢复";
+        if (type == PotionEffectType.HEALTH_BOOST) return "生命提升";
+        if (type == PotionEffectType.WATER_BREATHING) return "水下呼吸";
+        if (type == PotionEffectType.INVISIBILITY) return "隐身";
+        if (type == PotionEffectType.NIGHT_VISION) return "夜视";
+        if (type == PotionEffectType.NAUSEA) return "反胃";
+        if (type == PotionEffectType.POISON) return "中毒";
+        if (type == PotionEffectType.WITHER) return "凋零";
+        if (type == PotionEffectType.HUNGER) return "饥饿";
+        if (type == PotionEffectType.SLOWNESS) return "缓慢";
+        if (type == PotionEffectType.WEAKNESS) return "虚弱";
+        if (type == PotionEffectType.MINING_FATIGUE) return "挖掘疲劳";
+        if (type == PotionEffectType.DOLPHINS_GRACE) return "海豚的恩惠";
+        if (type == PotionEffectType.CONDUIT_POWER) return "潮涌能量";
+        if (type == PotionEffectType.LUCK) return "幸运";
+        return type.getName();
+    }
+
+    // ================================================================
+    //  加成计算
+    // ================================================================
 
     private double calculateBonusTotal(List<String> results, CardData cardData) {
         Map<String, Integer> countMap = new HashMap<>();
@@ -432,7 +679,9 @@ public class TicketListener implements Listener {
         return total;
     }
 
-    // ========== 关闭界面 ==========
+    // ================================================================
+    //  关闭界面
+    // ================================================================
 
     @EventHandler
     public void onInventoryClose(InventoryCloseEvent event) {
@@ -445,14 +694,80 @@ public class TicketListener implements Listener {
         }
     }
 
-    // ========== 工具方法 ==========
+    private void reopenCard(Player player, CardSession session) {
+        CardData cardData = session.cardData;
+        int size = cardData.getUiSize();
+        String titleRaw = cardData.getUiTitle();
+        int[] buttonSlots = cardData.getSlotPositions();
+
+        Inventory inv = Bukkit.createInventory(null, size,
+                MiniMessage.miniMessage().deserialize(titleRaw));
+
+        if (cardData.isMisc()) {
+            fillWitchBackground(inv);
+            for (int i = 0; i < buttonSlots.length; i++) {
+                int slot = buttonSlots[i];
+                if (session.scratched[i]) {
+                    handleMiscCardClick(player, session, i, slot);
+                } else {
+                    inv.setItem(slot, createBedrockButton());
+                }
+            }
+        } else {
+            fillEcoBackground(inv, cardData);
+            int rewardSlotCount = cardData.getRewardSlots();
+            double globalMult = plugin.getMultiplier();
+
+            for (int i = 0; i < buttonSlots.length; i++) {
+                int slot = buttonSlots[i];
+                if (session.scratched[i]) {
+                    if (i < rewardSlotCount) {
+                        String rewardKey = session.rewardResults.get(i);
+                        CardData.RewardEntry entry = cardData.getRewardByKey(rewardKey);
+                        double baseReward = (entry != null) ? entry.getReward() : 0;
+                        Material displayMat = getRewardDisplayMaterial(rewardKey);
+                        ItemStack displayItem = new ItemStack(displayMat);
+                        ItemMeta meta = displayItem.getItemMeta();
+                        double actualReward = baseReward * globalMult;
+                        if (actualReward > 0) {
+                            meta.displayName(Component.text("§e§l+" + formatMoney(actualReward) + " 金币"));
+                        } else {
+                            meta.displayName(Component.text("§c§l谢谢参与"));
+                        }
+                        displayItem.setItemMeta(meta);
+                        inv.setItem(slot, displayItem);
+                    } else {
+                        int multIndex = i - rewardSlotCount;
+                        int multiplierValue = session.multiplierResults.get(multIndex);
+                        Material displayMat = getMultiplierDisplayMaterial(multiplierValue);
+                        ItemStack multItem = new ItemStack(displayMat);
+                        ItemMeta meta = multItem.getItemMeta();
+                        meta.displayName(Component.text("§e§l×" + multiplierValue));
+                        multItem.setItemMeta(meta);
+                        inv.setItem(slot, multItem);
+                    }
+                } else {
+                    inv.setItem(slot, createBedrockButton());
+                }
+            }
+        }
+
+        sessions.put(player.getUniqueId(), session);
+        player.openInventory(inv);
+    }
+
+    // ================================================================
+    //  工具方法
+    // ================================================================
 
     private String formatMoney(double amount) {
         if (amount == (long) amount) return String.valueOf((long) amount);
         return String.format("%.1f", amount);
     }
 
-    // ========== 会话内部类 ==========
+    // ================================================================
+    //  会话内部类
+    // ================================================================
 
     private static class CardSession {
         CardData cardData;
@@ -462,6 +777,11 @@ public class TicketListener implements Listener {
         boolean[] scratched;
         int remaining;
         boolean completed;
+
+        int witchPreset;
+        PotionEffectType[] witchBottleEffects;
+        int witchTimeBase;
+        double witchTimeMultiplier;
 
         CardSession(CardData cardData, int slotCount) {
             this.cardData = cardData;

@@ -1,3 +1,4 @@
+category: eco
 display: "<gradient:#00FFFF:#0080FF>钻石刮刮卡</gradient>"
 lore:
   - "<gray>右键打开，有8次刮奖机会"
@@ -7,7 +8,6 @@ bonus-enabled: true
 reward-slots: 5
 multiplier-slots: 3
 
-# 界面配置
 ui:
   size: 54
   title: "<gradient:#00FFFF:#0080FF>钻石刮刮卡</gradient>"
@@ -23,7 +23,6 @@ ui:
     - 42
   highlight-material: BLUE_STAINED_GLASS_PANE
 
-# 音效配置
 sounds:
   open: "BLOCK_ANVIL_LAND"
   reward: "ENTITY_VILLAGER_CELEBRATE"

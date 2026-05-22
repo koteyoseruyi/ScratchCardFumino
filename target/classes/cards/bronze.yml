@@ -1,3 +1,4 @@
+category: eco
 display: "<gradient:#CD7F32:#FFD700>铜刮刮卡</gradient>"
 lore:
   - "<gray>右键打开，有3次刮奖机会"
@@ -7,7 +8,6 @@ bonus-enabled: false
 reward-slots: 3
 multiplier-slots: 0
 
-# 界面配置
 ui:
   size: 27
   title: "<gradient:#CD7F32:#FFD700>铜刮刮卡</gradient>"
@@ -17,7 +17,6 @@ ui:
     - 13
     - 15
 
-# 音效配置
 sounds:
   open: "BLOCK_ANVIL_LAND"
   reward: "ENTITY_VILLAGER_CELEBRATE"

@@ -1,7 +1,10 @@
+com\example\scratch\StatsManager.class
 com\example\scratch\BuyCardCommand.class
 com\example\scratch\CardMenuListener.class
+com\example\scratch\StatsManager$PlayerStats.class
 com\example\scratch\TicketListener.class
 com\example\scratch\CardLoader.class
+com\example\scratch\GamblerTopCommand.class
 com\example\scratch\CardData.class
 com\example\scratch\CardType.class
 com\example\scratch\AdminCommand.class

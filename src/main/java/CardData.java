@@ -1,12 +1,14 @@
 package com.example.scratch;
 
 import org.bukkit.Material;
+import org.bukkit.potion.PotionEffectType;
 
 import java.util.*;
 
 public class CardData {
 
     private final String name;
+    private final String category;          // "eco" 或 "misc"
     private final String display;
     private final List<String> lore;
     private final int slotCount;
@@ -27,13 +29,14 @@ public class CardData {
     // 音效配置
     private final SoundConfig sounds;
 
-    public CardData(String name, String display, List<String> lore, int slotCount,
+    public CardData(String name, String category, String display, List<String> lore, int slotCount,
                     double price, boolean bonusEnabled, int rewardSlots, int multiplierSlots,
                     List<RewardEntry> rewards, List<MultiplierEntry> multipliers,
                     int uiSize, String uiTitle, Material backgroundMaterial,
                     int[] slotPositions, Material highlightMaterial,
                     SoundConfig sounds) {
         this.name = name;
+        this.category = category;
         this.display = display;
         this.lore = lore;
         this.slotCount = slotCount;
@@ -54,6 +57,9 @@ public class CardData {
     // ===== 基础信息 =====
 
     public String getName() { return name; }
+    public String getCategory() { return category; }
+    public boolean isEco() { return "eco".equalsIgnoreCase(category); }
+    public boolean isMisc() { return !isEco(); }
     public String getDisplay() { return display; }
     public List<String> getLore() { return lore; }
     public int getSlotCount() { return slotCount; }

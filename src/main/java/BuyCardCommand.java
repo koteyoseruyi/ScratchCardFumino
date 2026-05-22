@@ -37,7 +37,6 @@ public class BuyCardCommand implements CommandExecutor, TabCompleter {
             return true;
         }
 
-        // 从 CardLoader 获取卡片数据
         String typeName = args[0].toLowerCase();
         CardData cardData = plugin.getCardLoader().getCardData(typeName);
         if (cardData == null) {
@@ -54,20 +53,21 @@ public class BuyCardCommand implements CommandExecutor, TabCompleter {
             return true;
         }
 
-        // 计算价格
         double totalCost = cardData.getPrice() * plugin.getMultiplier() * amount;
 
-        // 检查余额
         if (!ScratchPlugin.getEconomy().has(player, totalCost)) {
             player.sendMessage("§c余额不足！需要 §e" + formatMoney(totalCost) + " 金币§c，你只有 §e"
                     + formatMoney(ScratchPlugin.getEconomy().getBalance(player)) + " 金币");
             return true;
         }
 
-        // 扣钱
         ScratchPlugin.getEconomy().withdrawPlayer(player, totalCost);
 
-        // 给卡
+        // 记录购买统计（仅 eco 类卡）
+        if (cardData.isEco()) {
+            plugin.getStatsManager().recordPurchase(player.getUniqueId(), player.getName(), totalCost);
+        }
+
         ItemStack card = buildCard(cardData);
         card.setAmount(amount);
         player.getInventory().addItem(card);
@@ -92,7 +92,6 @@ public class BuyCardCommand implements CommandExecutor, TabCompleter {
         meta.lore(compList);
 
         NamespacedKey key = new NamespacedKey(plugin, "card_type");
-        // 使用大写枚举名，与 CardType 保持一致
         meta.getPersistentDataContainer().set(key, PersistentDataType.STRING, cardData.getName().toUpperCase());
         card.setItemMeta(meta);
         return card;
@@ -103,6 +102,7 @@ public class BuyCardCommand implements CommandExecutor, TabCompleter {
             case "bronze" -> "铜刮刮卡";
             case "gold" -> "金刮刮卡";
             case "diamond" -> "钻石刮刮卡";
+            case "witch" -> "女巫的刮刮卡";
             default -> {
                 CardData data = plugin.getCardLoader().getCardData(cardType);
                 if (data != null) {
@@ -114,14 +114,11 @@ public class BuyCardCommand implements CommandExecutor, TabCompleter {
         };
     }
 
-    // ========== Tab 补全 ==========
-
     @Override
     public List<String> onTabComplete(CommandSender sender, Command command, String alias, String[] args) {
         if (!(sender instanceof Player)) return List.of();
 
         if (args.length == 1) {
-            // 补全卡片种类
             String partial = args[0].toLowerCase();
             return plugin.getCardLoader().getCardNames().stream()
                     .filter(name -> name.startsWith(partial))

@@ -15,6 +15,9 @@ commands:
     description: 打开刮刮卡商店
     usage: /scratchshop
     aliases: [shop]
+  gamblertop:
+    description: 查询刮刮卡排行榜
+    usage: /gamblertop [earned|profit]
 permissions:
   scratchcard.admin:
     default: op

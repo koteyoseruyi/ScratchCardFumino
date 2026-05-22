@@ -30,6 +30,7 @@ public class CardLoader {
         saveDefaultCard("bronze.yml");
         saveDefaultCard("gold.yml");
         saveDefaultCard("diamond.yml");
+        saveDefaultCard("witch.yml");
 
         File[] files = cardsDir.listFiles((dir, name) -> name.endsWith(".yml"));
         if (files == null) return;
@@ -43,7 +44,7 @@ public class CardLoader {
                 CardData data = parseCard(name, config);
                 if (data != null) {
                     cards.put(name, data);
-                    plugin.getLogger().info("已加载刮刮卡: " + name);
+                    plugin.getLogger().info("已加载刮刮卡: " + name + " (分类: " + data.getCategory() + ")");
                 }
             } catch (Exception e) {
                 plugin.getLogger().warning("无法加载刮刮卡文件: " + file.getName() + " - " + e.getMessage());
@@ -76,6 +77,8 @@ public class CardLoader {
             plugin.getLogger().warning("刮刮卡 " + name + " 缺少 display 字段，跳过");
             return null;
         }
+
+        String category = config.getString("category", "eco");
 
         List<String> lore = config.getStringList("lore");
         int slotCount = config.getInt("slot-count", 3);
@@ -141,7 +144,8 @@ public class CardLoader {
             }
         }
 
-        if (rewards.isEmpty()) {
+        // misc 类卡片允许没有奖励配置
+        if (rewards.isEmpty() && !"misc".equalsIgnoreCase(category)) {
             plugin.getLogger().warning("刮刮卡 " + name + " 没有有效的奖励配置，跳过");
             return null;
         }
@@ -161,15 +165,12 @@ public class CardLoader {
             }
         }
 
-        return new CardData(name, display, lore, slotCount, price, bonusEnabled,
+        return new CardData(name, category, display, lore, slotCount, price, bonusEnabled,
                 rewardSlots, multiplierSlots, rewards, multipliers,
                 uiSize, uiTitle, bgMaterial, slotPositions, highlightMaterial,
                 sounds);
     }
 
-    /**
-     * 解析音效配置
-     */
     private CardData.SoundConfig parseSounds(ConfigurationSection section) {
         String open = "BLOCK_ANVIL_LAND";
         String reward = "ENTITY_VILLAGER_CELEBRATE";

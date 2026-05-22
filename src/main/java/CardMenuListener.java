@@ -134,6 +134,7 @@ public class CardMenuListener implements Listener, CommandExecutor {
         double actualPrice = cardData.getPrice() * plugin.getMultiplier();
         loreComponents.add(Component.text(""));
         loreComponents.add(Component.text("§e价格: " + formatMoney(actualPrice) + " 金币"));
+        loreComponents.add(Component.text("§7分类: " + (cardData.isEco() ? "§a金钱奖励" : "§d特殊效果")));
         loreComponents.add(Component.text("§a左键点击购买"));
 
         meta.lore(loreComponents);
@@ -186,6 +187,11 @@ public class CardMenuListener implements Listener, CommandExecutor {
         }
 
         ScratchPlugin.getEconomy().withdrawPlayer(player, actualPrice);
+
+        // 记录购买统计（仅 eco 类卡）
+        if (cardData.isEco()) {
+            plugin.getStatsManager().recordPurchase(player.getUniqueId(), player.getName(), actualPrice);
+        }
 
         ItemStack card = buildPhysicalCard(cardData);
         card.setAmount(1);

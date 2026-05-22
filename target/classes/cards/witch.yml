@@ -1,0 +1,31 @@
+category: misc
+display: "<gradient:#800080:#00FF00>女巫的刮刮卡</gradient>"
+lore:
+  - "<gray>右键打开，试试你的运气！"
+slot-count: 5
+price: 10.0
+bonus-enabled: false
+reward-slots: 5
+multiplier-slots: 0
+
+ui:
+  size: 54
+  title: "<gradient:#800080:#00FF00>女巫的刮刮卡</gradient>"
+  background-material: PURPLE_STAINED_GLASS_PANE
+  slot-positions:
+    - 16
+    - 21
+    - 29
+    - 31
+    - 43
+
+sounds:
+  open: "BLOCK_ANVIL_LAND"
+  reward: "ENTITY_VILLAGER_CELEBRATE"
+  empty: "ENTITY_VILLAGER_HURT"
+  scratch: "BLOCK_GRINDSTONE_USE"
+  complete: "ENTITY_FIREWORK_ROCKET_LAUNCH"
+
+# 女巫卡不使用此字段，仅用于通过加载器校验
+rewards:
+  PLACEHOLDER: { weight: 1, reward: 0.0 }

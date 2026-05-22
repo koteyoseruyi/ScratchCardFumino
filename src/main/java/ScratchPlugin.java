@@ -8,6 +8,7 @@ public final class ScratchPlugin extends JavaPlugin {
 
     private static Economy econ;
     private CardLoader cardLoader;
+    private StatsManager statsManager;
 
     @Override
     public void onEnable() {
@@ -16,6 +17,9 @@ public final class ScratchPlugin extends JavaPlugin {
         // 初始化卡片加载器
         cardLoader = new CardLoader(this);
         cardLoader.loadCards();
+
+        // 初始化统计数据管理器
+        statsManager = new StatsManager(this);
 
         if (!setupEconomy()) {
             getLogger().severe("未找到 Vault 经济插件，插件将禁用！");
@@ -32,6 +36,7 @@ public final class ScratchPlugin extends JavaPlugin {
         // 注册指令
         AdminCommand adminCommand = new AdminCommand(this);
         BuyCardCommand buyCardCommand = new BuyCardCommand(this);
+        GamblerTopCommand gamblerTopCommand = new GamblerTopCommand(this);
 
         getCommand("getcard").setExecutor(adminCommand);
         getCommand("getcard").setTabCompleter(adminCommand);
@@ -40,6 +45,9 @@ public final class ScratchPlugin extends JavaPlugin {
         getCommand("buycard").setTabCompleter(buyCardCommand);
 
         getCommand("scratchshop").setExecutor(cardMenuListener);
+
+        getCommand("gamblertop").setExecutor(gamblerTopCommand);
+        getCommand("gamblertop").setTabCompleter(gamblerTopCommand);
 
         getLogger().info("刮刮卡插件 v" + getDescription().getVersion() + " 已启用！");
     }
@@ -64,5 +72,9 @@ public final class ScratchPlugin extends JavaPlugin {
 
     public CardLoader getCardLoader() {
         return cardLoader;
+    }
+
+    public StatsManager getStatsManager() {
+        return statsManager;
     }
 }

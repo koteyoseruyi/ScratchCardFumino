@@ -1,3 +1,4 @@
+category: eco
 display: "<gradient:#FFD700:#FFA500>金刮刮卡</gradient>"
 lore:
   - "<gray>右键打开，有5次刮奖机会"
@@ -7,7 +8,6 @@ bonus-enabled: true
 reward-slots: 5
 multiplier-slots: 0
 
-# 界面配置
 ui:
   size: 27
   title: "<gradient:#FFD700:#FFA500>金刮刮卡</gradient>"
@@ -19,7 +19,6 @@ ui:
     - 21
     - 23
 
-# 音效配置
 sounds:
   open: "BLOCK_ANVIL_LAND"
   reward: "ENTITY_VILLAGER_CELEBRATE"
