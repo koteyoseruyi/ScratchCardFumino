@@ -238,9 +238,9 @@ public class TicketListener implements Listener {
             for (int i = 0; i < 3; i++) {
                 session.witchBottleEffects[i] = WITCH_PRESET1_EFFECTS.get(random.nextInt(WITCH_PRESET1_EFFECTS.size()));
             }
-            int[] timeBases = {30, 60, 120, 240};
+            int[] timeBases = {20, 30, 40, 50, 60, 64};
             session.witchTimeBase = timeBases[random.nextInt(timeBases.length)];
-            double[] tMultipliers = {0.5, 1.0, 1.5};
+            double[] tMultipliers = {0.75, 1.0, 1.25};
             session.witchTimeMultiplier = tMultipliers[random.nextInt(tMultipliers.length)];
         }
 

@@ -34,11 +34,11 @@ sounds:
   multiplier-pitch-max: 2.0
 
 rewards:
-  EMPTY:   { weight: 55, reward: 0.0 }
-  SMALL:   { weight: 25, reward: 0.3 }
-  MEDIUM:  { weight: 12, reward: 1.0 }
-  LARGE:   { weight: 6,  reward: 3.21 }
-  HUGE:    { weight: 2,  reward: 20.0 }
+  EMPTY:   { weight: 43, reward: 0.0 }
+  SMALL:   { weight: 27, reward: 0.3 }
+  MEDIUM:  { weight: 16, reward: 1.0 }
+  LARGE:   { weight: 11,  reward: 3.00 }
+  HUGE:    { weight: 3,  reward: 16.0 }
 multipliers:
   "1": { weight: 55 }
   "2": { weight: 35 }

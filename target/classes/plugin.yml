@@ -1,5 +1,5 @@
 name: ScratchCardFumino
-version: 1.1
+version: 1.2.1
 main: com.example.scratch.ScratchPlugin
 api-version: "1.21"
 depend: [Vault]

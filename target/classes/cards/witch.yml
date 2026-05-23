@@ -3,7 +3,7 @@ display: "<gradient:#800080:#00FF00>女巫的刮刮卡</gradient>"
 lore:
   - "<gray>右键打开，试试你的运气！"
 slot-count: 5
-price: 6.0
+price: 2.5
 bonus-enabled: false
 reward-slots: 5
 multiplier-slots: 0

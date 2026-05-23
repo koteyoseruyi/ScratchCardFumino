@@ -25,7 +25,7 @@ sounds:
   complete: "ENTITY_FIREWORK_ROCKET_LAUNCH"
 
 rewards:
-  EMPTY:   { weight: 51, reward: 0.0 }
-  SMALL:   { weight: 34, reward: 0.3 }
-  MEDIUM:  { weight: 11, reward: 0.6 }
-  LARGE:   { weight: 4,  reward: 3.2 }
+  EMPTY:   { weight: 47, reward: 0.0 }
+  SMALL:   { weight: 35, reward: 0.3 }
+  MEDIUM:  { weight: 12, reward: 0.6 }
+  LARGE:   { weight: 6,  reward: 2 }
