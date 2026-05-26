@@ -51,6 +51,8 @@ public class CardMenuListener implements Listener, CommandExecutor {
             sender.sendMessage("§c该指令只能由玩家执行！");
             return true;
         }
+        // 关闭当前界面（如 EasyMenu），避免事件冲突
+        player.closeInventory();
         openMenu(player);
         return true;
     }
@@ -145,10 +147,18 @@ public class CardMenuListener implements Listener, CommandExecutor {
 
     @EventHandler
     public void onInventoryClick(InventoryClickEvent event) {
+        // 安全保护：如果事件已被其他插件取消，不处理
+        if (event.isCancelled()) return;
+
         if (!(event.getWhoClicked() instanceof Player player)) return;
         UUID uuid = player.getUniqueId();
-        if (!playerPages.containsKey(uuid)) return;
 
+        // 检查是否是商店界面
+        if (!playerPages.containsKey(uuid)) {
+            return;
+        }
+
+        // 是商店界面，取消事件并处理
         event.setCancelled(true);
 
         ItemStack current = event.getCurrentItem();
